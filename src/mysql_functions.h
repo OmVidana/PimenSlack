@@ -5,7 +5,7 @@
 #ifndef PIMENSLACK_MYSQL_FUNCTIONS_H
 #define PIMENSLACK_MYSQL_FUNCTIONS_H
 
-#include <mysql.h>
+#include <mysql/mysql.h>
 
 MYSQL *connect_to_mysql();
 
