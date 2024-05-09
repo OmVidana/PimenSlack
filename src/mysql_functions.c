@@ -58,11 +58,15 @@ void insert_user(MYSQL *con, const char *username) {
     printf("User '%s' inserted successfully!\n", username);
 }
 
-void find_user(MYSQL *con, const char *username) {
+#include <stdio.h>
+#include <stdlib.h>
+#include <mysql/mysql.h>
+
+bool find_user(MYSQL *con, const char *username, const char *password) {
     MYSQL_RES *result;
     MYSQL_ROW row;
-    char query[100];
-    sprintf(query, "SELECT * FROM users WHERE name='%s'", username);
+    char query[200]; // Ajustamos el tamaño del buffer
+    sprintf(query, "SELECT * FROM users WHERE name='%s' AND password='%s'", username, password);
     if (mysql_query(con, query)) {
         fprintf(stderr, "Error finding user: %s\n", mysql_error(con));
         mysql_close(con);
@@ -76,9 +80,9 @@ void find_user(MYSQL *con, const char *username) {
     }
     row = mysql_fetch_row(result);
     if (row == NULL) {
-        printf("User '%s' not found\n", username);
+        return false;
     } else {
-        printf("User '%s' found with ID: %s\n", username, row[0]);
+        return true;
+
     }
-    mysql_free_result(result);
 }

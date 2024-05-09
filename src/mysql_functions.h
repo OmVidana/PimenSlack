@@ -6,6 +6,7 @@
 #define PIMENSLACK_MYSQL_FUNCTIONS_H
 
 #include <mysql/mysql.h>
+#include <stdbool.h>
 
 MYSQL *connect_to_mysql();
 
@@ -17,6 +18,6 @@ void create_table(MYSQL *con);
 
 void insert_user(MYSQL *con, const char *username);
 
-void find_user(MYSQL *con, const char *username);
+bool find_user(MYSQL *con, const char *username, const char *password);
 
 #endif //PIMENSLACK_MYSQL_FUNCTIONS_H
