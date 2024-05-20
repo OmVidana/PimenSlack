@@ -1,0 +1,26 @@
+.App {
+    text-align: center;
+  }
+
+  .userInput{
+height: 70px;
+width: 450px;
+font-weight: bold;
+
+  }
+
+  .logo{
+    width:  150px;
+  }
+
+.homeBtn{
+  display: flex;
+  margin-right: 90%; 
+  width: 70px;
+  color: #e0caa1;
+  height: 70px ;
+  position: absolute;
+  margin-bottom: 800px;
+}
+
+

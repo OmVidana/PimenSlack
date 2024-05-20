@@ -1,0 +1,280 @@
+.App {
+    text-align: center;
+  }
+
+.buttons{
+    display: flex;
+    position: relative;
+    margin-right: 75%;
+    margin-bottom: 40%;
+}
+ .personalBtn{
+    background-color:#d9d9d9;
+    height: 100px;
+    margin-right: 20px;
+    width: 100px;
+    text-align: center;
+    border-radius: 15px;
+ }
+
+ .personalBtn:focus{
+   cursor: pointer;
+   background-color:#128c7e;
+ }
+
+ 
+ .groupsBtn{
+    background-color:#d9d9d9;
+    height: 100px;
+    margin-right: 20px;
+    width: 100px;
+    text-align: center;
+    border-radius: 15px;
+ }
+
+ .groupsBtn:focus{
+   cursor: pointer;
+   background-color:#128c7e;
+
+ }
+
+ .notificationsBtn{
+    background-color:#d9d9d9;
+    height: 100px;
+    margin-right: 20px;
+    width: 100px;
+    text-align: center;
+    border-radius: 15px;
+ }
+
+ 
+ .notificationsBtn:focus{
+   cursor: pointer;
+   background-color:#128c7e;
+
+ }
+
+ .chatMenu{
+    position: absolute;
+    gap: 15px;
+    top: 40;
+    left: 20;
+    display: flex;
+    padding-top: 20px;
+    flex-direction: column;
+    background-color: #717171;
+    width: 20%;
+    height: 750px;
+    margin-top: 100px;
+    padding-left: 20px;
+    margin-right: 1450px;
+    border-radius: 20px;
+    overflow-y:auto;
+    flex: none;
+ }
+
+ &::-webkit-scrollbar{
+   display: list-item;
+ }
+
+ .chat {
+  position: absolute;
+  display: flex;
+  background-color: #2f2f2f;
+  width: 70%;
+  height: 850px;
+  margin-right: 0px;
+  margin-left: 400px;
+  border-radius: 20px;
+  flex-direction: column;
+}
+
+ .chatCard{
+   flex: none;
+    z-index: 1;
+    display: flex;
+    background-color: #1f1f1f;
+    color: #ece5dd;
+    width: 90%;
+    height: 120px;
+    border-radius: 20px;
+    flex-direction: column;
+    text-align: left;
+ }
+
+
+ .messageSelectionBtn{
+background: none;
+border-radius: 20px;
+border:none;
+ }
+
+.messageSelectionBtn:focus{
+  background-color: #128c7e;
+}
+
+.messageSelectionBtn:hover{
+  background-color: #128c7e;
+
+}
+
+
+ .userName{
+   font-size: 25px;
+   padding-left: 20px;
+   display: flex;
+   flex-direction: row;
+   gap: 15px;
+ }
+
+.messagePreview{
+   padding-left: 20px;
+   font-size: 18px; 
+   
+}
+
+.nameHeader{
+  display: flex;
+  width: 100%;
+  background-color: #9f9f9f;
+  height: 13%;
+  border-top-right-radius: 20px;
+  border-top-left-radius: 20px;
+  flex-direction: row;
+  justify-content: space-between;
+  padding-right: 60px;
+}
+
+.inputGroup {
+  display: flex;
+  align-items: center;
+  padding: 20px;
+  background-color: #9f9f9f;
+  border-bottom-right-radius: 20px;
+  border-bottom-left-radius: 20px;
+}
+
+.userNameText{
+  font-size: 50px;
+  color: #1f1f1f;
+  font-weight: bold;
+  padding-top: 10px;
+  margin-left: 40%;
+}
+
+
+.optionsBtn{
+height: 100px;
+background: none;
+border: none;
+}
+
+
+
+/* .optionsBtn:hover{
+  color: #c2be5b;
+  background-color: #c2be5b;
+} */
+
+.chatHolder {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  background-color: #1f1f1f;
+  height: 100%;
+  justify-content: space-between;
+  border-bottom-right-radius: 20px;
+  border-bottom-left-radius: 20px;
+}
+
+.messageHolder {
+  flex-grow: 1;
+  padding: 20px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.textPlaceholder {
+  width: 90%;
+  height: 70px;
+  border-radius: 10px;
+  border: none;
+  margin-right: 50px;
+  padding: 10px;
+  font-size: 16px;
+}
+
+.sendBtn {
+  border-radius: 100px;
+  width: 60px;
+  height: 60px;
+  border: none;
+  background-color: #626262;
+}
+
+.sendBtn:hover{
+  background-color: #1f1f1f;
+}
+
+.userMsg {
+  background-color: #3f3f7f;
+  color: white;
+  padding: 10px;
+  border-radius: 10px;
+  margin: 5px 0;
+}
+
+.message {
+  max-width: 60%;
+  padding: 10px;
+  margin: 5px 0;
+  border-radius: 10px;
+  position: relative;
+  word-wrap: break-word;
+  font-size: 16px;
+  line-height: 1.4;
+}
+
+.userMsg {
+  align-self: flex-end;
+  background-color: #128c7e;
+  color: white;
+  border-radius: 7.5px 7.5px 0 7.5px;
+  padding: 10px 15px;
+  position: relative;
+  display: inline-block;
+  max-width: 80%;
+}
+
+.userMsg:after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: -10px;
+  border-width: 10px  10px 0;
+  border-style: solid;
+  border-color: #128c7e transparent;
+}
+
+.otherMsg {
+  align-self: flex-start;
+  background-color: #ece5dd;
+  color: black;
+  border-radius: 7.5px 7.5px 7.5px 0;
+  padding: 10px 15px;
+  position: relative;
+  display: inline-block;
+  max-width: 80%;
+}
+
+.otherMsg:after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -10px;
+  border-width: 10px 0 10px 10px;
+  border-style: solid;
+  border-color: transparent #ece5dd;
+}
+
