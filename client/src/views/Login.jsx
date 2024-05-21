@@ -1,83 +1,65 @@
-import React from 'react';
+import React, { useState } from 'react';
 import 'bootstrap/dist/css/bootstrap.css';
 import '../styles/Login.css';
-import { useState } from 'react';
-import logo from '../Logo.png'
+import logo from '../Logo.png';
 import 'bootstrap-icons/font/bootstrap-icons.css';
-import { Button } from 'bootstrap';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
-const alertPlaceholder = document.getElementById('liveAlertPlaceholder')
-const appendAlert = (message, type) => {
-  const wrapper = document.createElement('div')
-  wrapper.innerHTML = [
-    `<div class="alert alert-${type} alert-dismissible" role="alert">`,
-    `   <div>${message}</div>`,
-    '   <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>',
-    '</div>'
-  ].join('')
+function Login() {
+  const [name, setName] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const navigate = useNavigate();
 
-  alertPlaceholder.append(wrapper)
-}
+  // Fetch users from local storage
+  const getUsers = () => {
+    const users = localStorage.getItem('users');
+    return users ? JSON.parse(users) : [];
+  };
 
-const alertTrigger = document.getElementById('liveAlertBtn')
-if (alertTrigger) {
-  alertTrigger.addEventListener('click', () => {
-    appendAlert('Inicio de sesion correcto!', 'success')
-  })
-}
+  const handleLogin = (event) => {
+    event.preventDefault();
+    const users = getUsers();
+    const user = users.find(user => user.Username === name && user.Password === password);
 
+    if (user) {
+      setError('');
+      navigate('/Chat'); // Navigate to the Chat page upon successful login
+    } else {
+      setError('Invalid username or password');
+    }
+  };
 
-function Login(){
-    const [name, setName] = useState("");
-    const [password, setPassword] = useState("");
-
-    const handleSubmitName = (event) => {
-        event.preventDefault();
-        alert(`The name you entered was: ${name}`)
-      }
-
-      const handleSubmitPassword = (event) => {
-        event.preventDefault();
-        alert(`The password you entered was: ${password}`)
-      }
-
-    return(
-<div className='Login'>
-    <header className="App-header">
-    <a data-mdb-ripple-init class="btn btn-primary" className='homeBtn' href="#!" role="button">
-    <Link to="/Menu">
-        <i class="bi bi-house-door bi-6x"  style={{fontSize:60, color:"#e0caa1"}}  width="200px" ></i>
-        </Link>
+  return (
+    <div className='Login'>
+      <header className="App-header">
+        <a className='homeBtn' href="#!" role="button">
+          <Link to="/Menu">
+            <i className="bi bi-house-door bi-6x" style={{ fontSize: 60, color: "#e0caa1" }}></i>
+          </Link>
         </a>
-    
-    <img className = "logo" src={logo}></img>
-      <form onSubmit={handleSubmitName} style={{padding:80}}>
-          <input 
-          className='userInput'
-          placeholder='Username'
-            type="text" 
+        <img className="logo4" src={logo} alt="Logo" />
+        {error && <div className="alert alert-danger">{error}</div>}
+        <form onSubmit={handleLogin} style={{ padding: 80 }}>
+          <input
+            className='userInput'
+            placeholder='Username'
+            type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
           />
-      </form>
-
-    <form onSubmit={handleSubmitPassword} className='passwordInput'>
-        <input 
-          className='userInput'
-         placeholder='Password'
-          type="password" 
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
-    </form>
-    {/* <Link to = "/Chat"> */}
-    <div id="liveAlertPlaceholder"></div>
-          <button type="button" className="btnLogin" id="liveAlertBtn">Iniciar Sesion</button>
-          {/* </Link> */}
-    </header>
-</div>
-    )
+          <input
+            className='userInput passwordInput'
+            placeholder='Password'
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+          <button type="submit" className="btnLogin4">Iniciar Sesión</button>
+        </form>
+      </header>
+    </div>
+  );
 }
 
 export default Login;

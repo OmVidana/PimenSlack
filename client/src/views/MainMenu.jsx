@@ -1,4 +1,4 @@
-import '../styles/App.css';
+import '../styles/MainMenu.css';
 import 'bootstrap/dist/css/bootstrap.css';
 import logo from '../Logo.png'
 import Login from './Login';
@@ -11,7 +11,7 @@ function MainMenu() {
     <div className="App">
       <header className="App-header">
         <div>
-          <img className = "logo" src={logo}></img>
+          <img className = "logo2" src={logo}></img>
         </div>
         <Link to="/Login">
           <button type="button" className="btnLogin" >Iniciar Sesion</button>

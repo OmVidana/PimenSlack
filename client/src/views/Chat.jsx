@@ -1,81 +1,90 @@
-import React from 'react';
-import { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import "../styles/Chat.css";
-import { Link } from 'react-router-dom';
-import Data from "../test.json"
+import Data from "../test.json";
 import 'bootstrap-icons/font/bootstrap-icons.css';
 import 'bootstrap/dist/css/bootstrap.css';
+import CreateGroup from '../components/createGroup';
 
+function Chat() {
+  
+  const [userName, setUserName] = useState("");
+  const [messages, setMessages] = useState([]);
+  const [currentMessage, setCurrentMessage] = useState("");
+  const [showModal, setShowModal] = useState(false);
+  const [groups, setGroups] = useState(Data);
 
+  const handleInputChange = (event) => {
+    setCurrentMessage(event.target.value);
+  };
 
+  const handleSendClick = () => {
+    if (currentMessage.trim() !== "") {
+      setMessages([...messages, { text: currentMessage, sender: 'user' }]);
+      setCurrentMessage("");
+    }
+  };
 
-function Chat(){
-    const [userName, setUserName] = useState("")
-    const [messages, setMessages] = useState([]);
-    const [currentMessage, setCurrentMessage] = useState("");
+  const openGroupModal = () => {
+    setShowModal(true);
+  };
 
-    const handleInputChange = (event) => {
-        setCurrentMessage(event.target.value);
+  const closeGroupModal = () => {
+    setShowModal(false);
+  };
+
+  const addGroup = (groupName) => {
+    if (groupName.trim() !== "") {
+      const newGroup = {
+        User: groupName,
+        Message: "Nuevo grupo creado",
+        Hour: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       };
+      setGroups([...groups, newGroup]);
+    }
+  };
 
-      const handleSendClick = () => {
-        if (currentMessage.trim() !== "") {
-          setMessages([...messages, { text: currentMessage, sender: 'user' }]);
-          setCurrentMessage("");
-        }
-      };
-
-
-    return(
-<div className='Login'>
-    <header className="App-header">
-        {/*BUTTONS*/}
-    <div className='buttons'>
-{/*Personal*/}
-    <button className="personalBtn">
-    <i class="bi bi-person-fill" style={{fontSize:55, color: "#8a8a8a"}} ></i>
-        </button>
-{/*Groups*/}
-<button className="groupsBtn">
-    <i class="bi bi-people-fill" style={{fontSize:55, color: "#8a8a8a"}}  width="200px" ></i>
-        </button>
-
-{/*Notifications*/}
-<button className="notificationsBtn">
-    <i class="bi bi-bell-fill" style={{fontSize:55, color: "#8a8a8a"}}  width="200px" ></i>
-        </button>  
+  return (
+    <div className='Login'>
+      <header className="App-header">
+        {/* BUTTONS */}
+        <div className='buttons'>
+          {/* Personal */}
+          <button className="personalBtn">
+            <i className="bi bi-person-fill" style={{ fontSize: 55, color: "#8a8a8a" }}></i>
+          </button>
+          {/* Groups */}
+          <button className="groupsBtn" onClick={openGroupModal}>
+            <i className="bi bi-people-fill" style={{ fontSize: 55, color: "#8a8a8a" }} width="200px"></i>
+          </button>
+          {/* Notifications */}
+          <button className="notificationsBtn">
+            <i className="bi bi-bell-fill" style={{ fontSize: 55, color: "#8a8a8a" }} width="200px"></i>
+          </button>
         </div>
 
-
-        {/*Chat Menu*/}
+        {/* Chat Menu */}
         <div className='chatMenu'>
-        <div className='chatCard'></div>
-        {Data.map((data, key) => {
-            return(
-                <button className='messageSelectionBtn'>
-            <div className='chatCard' key={key}>   
-    <p className="userName">
-        {data.User}
-<p>
-        {data.Hour}
-    </p>
-</p>
-    <div className='messagePreview'>
-        {data.Message}
-    </div>
-        {/* <span class="position-absolute top-0 start-100 translate-middle p-2 bg-danger border border-light rounded-circle"/> */}
-            </div>
+          <div className='chatCard'>
+            <i className="bi bi-person-fill" style={{ fontSize: 80, color: "#8a8a8a", paddingLeft: 10, display: "flex", paddingTop: 20, position: "relative" }}></i>
+            <div className='usernameTag'>Usuario activo</div>
+          </div>
+          {groups.map((data, key) => (
+            <button className='messageSelectionBtn' key={key}>
+              <div className='chatCard'>
+                <p className="userName">
+                  {data.User}
+                  <p>{data.Hour}</p>
+                </p>
+                <div className='messagePreview'>
+                  {data.Message}
+                </div>
+              </div>
             </button>
-            )
-        })}
+          ))}
         </div>
-        {/*UserChatCard*/}
 
-
-
-      {/*Chat */}
-     {/* Chat */}
-     <div className='chat'>
+        {/* Chat */}
+        <div className='chat'>
           <div className='nameHeader'>
             <p className='userNameText'>Grupo de prueba</p>
             <button className='optionsBtn'>
@@ -91,6 +100,7 @@ function Chat(){
                 </div>
               ))}
             </div>
+
             <div className='inputGroup'>
               <input
                 type="text"
@@ -107,6 +117,7 @@ function Chat(){
           </div>
         </div>
       </header>
+      <CreateGroup showModal={showModal} closeModal={closeGroupModal} addGroup={addGroup} />
     </div>
   );
 }

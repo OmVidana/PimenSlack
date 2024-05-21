@@ -1,0 +1,57 @@
+.App {
+    text-align: center;
+  }
+  
+  .App-logo {
+    height: 40vmin;
+    pointer-events: none;
+  }
+  
+  @media (prefers-reduced-motion: no-preference) {
+    .App-logo {
+      animation: App-logo-spin infinite 20s linear;
+    }
+  }
+  
+  .App-header {
+    background-color: #404040;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-size: calc(10px + 2vmin);
+    color: white;
+  }
+  
+  .App-link {
+    color: #61dafb;
+  
+  }
+  
+  .btnLogin{
+    margin-top:100px;
+    height: 100px;
+    width: 300px;
+   background-color: white;
+   border-color: #0b99ff; 
+   border-width: 8px;
+   border-radius: 20px;
+   font-weight: bold;
+  }
+  
+  .btnRegister{
+    margin-top:30px;
+    height: 100px;
+    width: 300px;
+   background-color: white;
+   border-color: #f14722; 
+   border-width: 8px;
+   border-radius: 20px;
+   font-weight: bold;
+  }
+  
+  .logo2{
+    margin-top:50px;
+    width: 200px;
+  }

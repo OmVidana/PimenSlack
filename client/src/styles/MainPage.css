@@ -26,13 +26,43 @@
     width: 1920px;
     z-index: 1;
     height: 945px;
-    font-family: Georgia, 'Times New Roman', Times, serif;
+    font-family:'Franklin Gothic Medium', 'Arial Narrow', Arial, sans-serif;
     position: absolute;
-    color: black;
+    color: white;
+    border-width: 100px;
+    border-color: black;
+    border:10px;
+    border-style: groove;
+    -webkit-text-stroke: 10px black;
 }
+
+
+
 
 
 /* .titleBtn{
     width: 200px;
     height: 400px;
 } */
+
+.chiles{
+    display: flex;
+    position: absolute;
+    justify-content: center;
+    align-items: center;
+    margin-left: 500px;
+    margin-top: 300px;
+}
+
+.chiles2{
+    display: flex;
+    position: absolute;
+    justify-content: center;
+    align-items: center;
+    margin-left: 850px;
+    margin-top: 600px;
+}
+
+.logo{
+    width: 250px;
+}

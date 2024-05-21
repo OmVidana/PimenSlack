@@ -1,6 +1,5 @@
 [
 {
-    
     "User": "Gabriel",
     "Message": "Este es mi prueba de mensaje",
     "Hour": "12:05"
@@ -18,27 +17,12 @@
 },
 {
     "User": "Migue",
-    "Message": "Callense",
+    "Message": "Mande este mensaje a las 5",
     "Hour": "5:05"
 },
 {
     "User": "Esparza",
-    "Message": "Tontos, tontos todos",
-    "Hour": "5:05"
-},
-{
-    "User": "Esparza",
-    "Message": "Tontos, tontos todos",
-    "Hour": "5:05"
-},
-{
-    "User": "Esparza",
-    "Message": "Tontos, tontos todos",
-    "Hour": "5:05"
-},
-{
-    "User": "Esparza",
-    "Message": "Tontos, tontos todos",
+    "Message": "mensaje prueba",
     "Hour": "5:05"
 }
 ]
