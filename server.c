@@ -1,4 +1,5 @@
-// Servidor.c
+#define  _GNU_SOURCE
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -13,6 +14,29 @@
 
 #define MAX_CLIENTS 10
 #define BUFFER_SIZE 16384
+
+int register_user(MYSQL *con, const char *name, const char *password, const char *public_key, const char *private_key,
+                  char *status) {
+    return insert_row(con, "users", (const char *[][2]) {{"name",                   name},
+                                                         {"password",               password},
+                                                         {"public_encryption_key",  public_key},
+                                                         {"private_encryption_key", private_key},
+                                                         {"status",                 status},
+                                                         {NULL, NULL}});
+}
+
+uint8_t login(MYSQL *con, const char *username, const char *password) {
+    return find_user(con, username, password);
+}
+
+int create_chatroom(MYSQL *con, const char *chatroom_name, int user_id) {
+    char *admin_id;
+    asprintf(&admin_id, "%d", user_id);
+    return insert_row(con, "channels", (const char *[][2]) {{"name",             chatroom_name},
+                                                            {"administrator_id", admin_id},
+                                                            {NULL, NULL}});
+
+}
 
 /**
  * @brief Handle client connection and authentication
@@ -67,8 +91,10 @@ void handle_client(int client_socket, MYSQL *con) {
             token = strtok(NULL, "\n");
             if (token != NULL) {
                 strcpy(password, token);
-                if (find_user(con, username, password)) {
-                    send(client_socket, "1", strlen("1"), 0);
+                if (find_user(con, username, password) != 0) {
+                    char *token_for_user = encrypt(username);
+                    send(client_socket, token_for_user, strlen(token_for_user), 0);
+
                 } else {
                     send(client_socket, "0", strlen("0"), 0);
                 }
@@ -95,14 +121,13 @@ void handle_client(int client_socket, MYSQL *con) {
             }
         }
 
-        if (insert_user(con, username, password) != -1) {
+        if (register_user(con, username, password, "0", "0", "0") != -1) {
             send(client_socket, "1", strlen("1"), 0);
         } else {
             send(client_socket, "0", strlen("0"), 0);
         }
 
-    }
-    else if (strcmp(service, "creargrupo") == 0) {
+    } else if (strcmp(service, "creargrupo") == 0) {
         printf("Creando grupo\n");
         token = strtok(NULL, "\n");
         if (token != NULL) {
@@ -114,8 +139,14 @@ void handle_client(int client_socket, MYSQL *con) {
         }
         const char *group_name = groupname;
         const char *creator = username;
-        insert_chatroom(con, creator, group_name);
-        send(client_socket, "1", strlen("1"), 0);
+        char *chatroom_token;
+        if (create_chatroom(con, group_name, 1) != -1) {
+            asprintf(&chatroom_token, "<%s><%s><%s>", creator, group_name, "true");
+            send(client_socket, chatroom_token, strlen(chatroom_token), 0);
+        } else {
+            asprintf(&chatroom_token, "<%s><%s><%s>", creator, group_name, "false");
+            send(client_socket, "0", strlen(""), 0);
+        }
     } else {
         printf("Unknown service: %s\n", service);
     }
@@ -130,20 +161,15 @@ void kill_children() {
     exit(EXIT_SUCCESS);
 }
 
+
 /**
  * @brief Server main function
  *
  * @return int Exit status
  */
 int main() {
-    MYSQL *con = connect_to_mysql();
-    create_database(con);
-    use_database(con);
-    create_table(con);
-    const char *table_name = "chatrooms";
-    const char *fields = "creator VARCHAR(255), group_name VARCHAR(255), creation_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP";
-
-    create_table1(con, table_name, fields);
+    MYSQL *con = connect_and_create_database();
+    create_all_tables(con);
 
     int server_socket, client_socket;
     struct sockaddr_in server_addr, client_addr;

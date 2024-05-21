@@ -8,22 +8,14 @@
 #include <mysql/mysql.h>
 #include <stdbool.h>
 
-MYSQL *connect_to_mysql();
+MYSQL *connect_and_create_database();
 
-void create_database(MYSQL *con);
+void create_table(MYSQL *con, const char *table_name, const char* columns[]);
 
-void use_database(MYSQL *con);
+void create_all_tables(MYSQL *con);
 
-void create_table(MYSQL *con);
+int insert_row(MYSQL *con, const char *table_name, const char *data[][2]);
 
-void create_table1(MYSQL *con, const char *table_name, const char *fields);
-
-int insert_user(MYSQL *con, const char *username, const char *password);
-
-bool find_user(MYSQL *con, const char *username, const char *password);
-
-bool find_chatroom(MYSQL *con, const char *group_name);
-
-void insert_chatroom(MYSQL *con, const char *creator, const char *group_name);
+uint8_t find_user(MYSQL *con, const char *username, const char *password);
 
 #endif //PIMENSLACK_MYSQL_FUNCTIONS_H
