@@ -8,9 +8,11 @@
 #include <signal.h>
 #include "src/mysql_functions.h"
 #include <mysql/mysql.h>
+#include "src/rsa.h"
+
 
 #define MAX_CLIENTS 10
-#define BUFFER_SIZE 1024
+#define BUFFER_SIZE 16384
 
 /**
  * @brief Handle client connection and authentication
@@ -20,12 +22,18 @@
  */
 void handle_client(int client_socket, MYSQL *con) {
     char combined_credentials[BUFFER_SIZE];
+    char service[50];
     char username[50];
     char password[50];
+    char groupname[50];
     int bytes_received;
 
-    send(client_socket, "Credentials", strlen("Credentials"), 0);
+    char message[] = "Auth/CreateGroup/Exit:";
+    char *ciphertext = encrypt(message);
+    printf("Ciphertext: %s\n", ciphertext);
+    send(client_socket, ciphertext, strlen(ciphertext), 0);
     bytes_received = recv(client_socket, combined_credentials, sizeof(combined_credentials), 0);
+
     if (bytes_received <= 0) {
         fprintf(stderr, "Error receiving data from client\n");
         close(client_socket);
@@ -34,38 +42,97 @@ void handle_client(int client_socket, MYSQL *con) {
     combined_credentials[bytes_received] = '\0';
 
     printf("Credentials received: %s\n", combined_credentials);
-
     if (strcmp(combined_credentials, "exit") == 0) {
+
         printf("Client requested exit. Closing connection...\n");
         close(client_socket);
         kill(getpid(), SIGTERM);
         return;
+
+    }
+    char *decoded_credentials = decrypt(combined_credentials);
+
+    printf("Decoded credentials: %s\n", decoded_credentials);
+
+    //separate for each "\n" the decoded credentials
+    char *token = strtok(decoded_credentials, "\n");
+    if (token != NULL) {
+        strcpy(service, token);
     }
 
-    char *token = strtok(combined_credentials, ":");
-    if (token != NULL) {
-        strcpy(username, token);
-        printf("Username: %s\n", username);
-        token = strtok(NULL, ":");
+    if (strcmp(service, "autentificar") == 0) {
+        printf("Handling autentificar\n");
+        token = strtok(NULL, "\n");
         if (token != NULL) {
-            strcpy(password, token);
-            printf("Password: %s\n", password);
+            strcpy(username, token);
+            token = strtok(NULL, "\n");
+            if (token != NULL) {
+                strcpy(password, token);
+                if (find_user(con, username, password)) {
+                    send(client_socket, "1", strlen("1"), 0);
+                } else {
+                    send(client_socket, "0", strlen("0"), 0);
+                }
+            } else {
+                fprintf(stderr, "Error: Password not found\n");
+                close(client_socket);
+                return;
+            }
         } else {
-            fprintf(stderr, "Error: Password not found\n");
+            fprintf(stderr, "Error: Username not found\n");
             close(client_socket);
             return;
         }
+
+
+    } else if (strcmp(service, "register") == 0) {
+        printf("Registering user\n");
+        token = strtok(NULL, "\n");
+        if (token != NULL) {
+            strcpy(username, token);
+            token = strtok(NULL, "\n");
+            if (token != NULL) {
+                strcpy(password, token);
+            }
+        }
+
+    }
+    else if (strcmp(service, "creargrupo") == 0) {
+        printf("Creando grupo\n");
+        token = strtok(NULL, "\n");
+        if (token != NULL) {
+            strcpy(username, token);
+            token = strtok(NULL, "\n");
+            if (token != NULL) {
+                strcpy(groupname, token);
+            }
+        }
     } else {
-        fprintf(stderr, "Error: Username not found\n");
-        close(client_socket);
-        return;
+        printf("Unknown service: %s\n", service);
     }
 
-    if (find_user(con, username, password)) {
-        send(client_socket, "1", strlen("0"), 0);
-    } else {
-        send(client_socket, "0", strlen("0"), 0);
-    }
+//    char *token = strtok(combined_credentials, ":");
+//    if (token != NULL) {
+//        strcpy(username, token);
+//        token = strtok(NULL, ":");
+//        if (token != NULL) {
+//            strcpy(password, token);
+//        } else {
+//            fprintf(stderr, "Error: Password not found\n");
+//            close(client_socket);
+//            return;
+//        }
+//    } else {
+//        fprintf(stderr, "Error: Username not found\n");
+//        close(client_socket);
+//        return;
+//    }
+//
+//    if (find_user(con, username, password)) {
+//        send(client_socket, "1", strlen("1"), 0);
+//    } else {
+//        send(client_socket, "0", strlen("0"), 0);
+//    }
 
     close(client_socket);
 }
@@ -73,7 +140,7 @@ void handle_client(int client_socket, MYSQL *con) {
 /**
  * @brief Kill all child processes and exit
  */
-void kill_children( ) {
+void kill_children() {
     kill(0, SIGTERM);
     exit(EXIT_SUCCESS);
 }
