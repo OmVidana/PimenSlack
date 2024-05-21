@@ -18,6 +18,7 @@
  * @param client_socket Client socket descriptor
  * @param con MySQL connection handle
  */
+
 void handle_client(int client_socket, MYSQL *con) {
     char combined_credentials[BUFFER_SIZE];
     char username[50];
@@ -73,7 +74,7 @@ void handle_client(int client_socket, MYSQL *con) {
 /**
  * @brief Kill all child processes and exit
  */
-void kill_children( ) {
+void kill_children() {
     kill(0, SIGTERM);
     exit(EXIT_SUCCESS);
 }
@@ -84,11 +85,50 @@ void kill_children( ) {
  * @return int Exit status
  */
 int main() {
-    printf("Hola\n");
-    MYSQL *con = connect_to_mysql();
-    create_database(con);
-    use_database(con);
-    create_table(con);
+    MYSQL *con = connect_and_create_database();
+
+    // Creación de Tabla Usuarios, Chatrooms y Mensajes
+    create_table(con, "users", (const char *[]) {"ID SMALLINT UNSIGNED AUTO_INCREMENT PRIMARY KEY",
+                                                 "name VARCHAR(16)",
+                                                 "password VARCHAR(16)",
+                                                 "public_encryption_key BIGINT UNSIGNED",
+                                                 "private_encryption_key BIGINT UNSIGNED",
+                                                 "status BOOLEAN",
+                                                 NULL});
+    create_table(con, "channels", (const char *[]) {"ID MEDIUMINT UNSIGNED AUTO_INCREMENT PRIMARY KEY",
+                                                    "name VARCHAR(32)",
+                                                    "administrator_id SMALLINT UNSIGNED",
+                                                    "creation_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
+                                                    "FOREIGN KEY (administrator_id) REFERENCES users(ID)",
+                                                    NULL});
+    create_table(con, "messages", (const char *[]) {"ID INT UNSIGNED AUTO_INCREMENT PRIMARY KEY",
+                                                    "msg TEXT",
+                                                    "sent_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
+                                                    "user_id SMALLINT UNSIGNED",
+                                                    "channel_id MEDIUMINT UNSIGNED",
+                                                    "FOREIGN KEY (user_id) REFERENCES users(ID)",
+                                                    "FOREIGN KEY (channel_id) REFERENCES channels(ID)",
+                                                    NULL});
+    // Tablas de Relación Canales_Usuarios y Usuarios-Mensajes
+    create_table(con, "channels_users", (const char *[]) {"ID INT UNSIGNED AUTO_INCREMENT PRIMARY KEY",
+                                                          "channel_id MEDIUMINT UNSIGNED",
+                                                          "user_id SMALLINT UNSIGNED",
+                                                          "FOREIGN KEY (channel_id) REFERENCES channels(ID)",
+                                                          "FOREIGN KEY (user_id) REFERENCES users(ID)",
+                                                          NULL});
+    create_table(con, "user_messages", (const char *[]) {"ID INT UNSIGNED AUTO_INCREMENT PRIMARY KEY",
+                                                         "user_id SMALLINT UNSIGNED",
+                                                         "message_id INT UNSIGNED",
+                                                         "FOREIGN KEY (user_id) REFERENCES users(ID)",
+                                                         "FOREIGN KEY (message_id) REFERENCES messages(ID)",
+                                                         NULL});
+
+    insert_row(con, "users", (const char *[][2]) {{"name", "testing123"},
+                                                  {"password", "#ed4Mn_e2"},
+                                                  {"public_encryption_key", "11"},
+                                                  {"private_encryption_key", "13"},
+                                                  {"status", "0"},
+                                                  {NULL, NULL}});
 
     int server_socket, client_socket;
     struct sockaddr_in server_addr, client_addr;

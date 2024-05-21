@@ -8,15 +8,11 @@
 #include <mysql/mysql.h>
 #include <stdbool.h>
 
-MYSQL *connect_to_mysql();
+MYSQL *connect_and_create_database();
 
-void create_database(MYSQL *con);
+void create_table(MYSQL *con, const char *table_name, const char* columns[]);
 
-void use_database(MYSQL *con);
-
-void create_table(MYSQL *con);
-
-void insert_user(MYSQL *con, const char *username);
+void insert_row(MYSQL *con, const char *table_name, const char *data[][2]);
 
 bool find_user(MYSQL *con, const char *username, const char *password);
 
