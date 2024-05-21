@@ -1,7 +1,8 @@
 /* TO DO:
  * RECV Dynamically
  * Finish Client Loop RECV, SEND
- *
+ * REFACTOR find_user to use the new table
+ * 
 */
 
 // Servidor.c
@@ -77,13 +78,25 @@ void handle_client(int client_socket, MYSQL *con) {
     close(client_socket);
 }
 
-void handle_action(int user_id, const char *user_response) {
+void register_user() {
+
+}
+
+uint8_t login() {
+
+}
+
+void create_chatroom() {
+
+}
+
+void handle_action(uint8_t user_id, const char *user_response) {
     //Parsear para obtemer accion, ejemplo /register <name> <password>
     char *action = ""; //Obtener la accion solamente /register
     if (strcmp(action, "/register") == 0) {
-        //user_id = register(); // inserta row a users
+        //register_user(); // inserta row a users
     } else if (strcmp(action, "/login") == 0) {
-        //login(); // find_user y activa el usuario
+        //user_id = login(); // find_user y activa el usuario
     } else if (strcmp(action, "/new_chatroom") == 0) {
         //create_chatroom(); // crea un row de chatroom
     } else {
@@ -101,7 +114,7 @@ void client_loop(int client_socket) {
         exit(EXIT_FAILURE);
     }
 
-    int *user_id;
+    uint8_t *user_id;
     while (true) {
         char buffer[67000];
         ssize_t bytes_received = recv(client_socket, buffer, sizeof(buffer), 0);
@@ -111,7 +124,7 @@ void client_loop(int client_socket) {
             continue;
         }
         // handle_action(user_id, buffer);
-        
+
     }
 }
 

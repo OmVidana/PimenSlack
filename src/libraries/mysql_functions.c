@@ -98,8 +98,8 @@ void insert_row(MYSQL *con, const char *table_name, const char *data[][2]) {
 bool find_user(MYSQL *con, const char *username, const char *password) {
     MYSQL_RES *result;
     MYSQL_ROW row;
-    char query[200]; // Ajustamos el tamaño del buffer
-    sprintf(query, "SELECT * FROM users WHERE name='%s' AND password='%s'", username, password);
+    char *query; // Ajustamos el tamaño del buffer
+    asprintf(&query, "SELECT * FROM users WHERE name='%s' AND password='%s'", username, password);
     if (mysql_query(con, query)) {
         fprintf(stderr, "Error finding user: %s\n", mysql_error(con));
         mysql_close(con);
