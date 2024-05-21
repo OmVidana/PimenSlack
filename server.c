@@ -54,7 +54,6 @@ void handle_client(int client_socket, MYSQL *con) {
 
     printf("Decoded credentials: %s\n", decoded_credentials);
 
-    //separate for each "\n" the decoded credentials
     char *token = strtok(decoded_credentials, "\n");
     if (token != NULL) {
         strcpy(service, token);
@@ -96,6 +95,12 @@ void handle_client(int client_socket, MYSQL *con) {
             }
         }
 
+        if (insert_user(con, username, password) != -1) {
+            send(client_socket, "1", strlen("1"), 0);
+        } else {
+            send(client_socket, "0", strlen("0"), 0);
+        }
+
     }
     else if (strcmp(service, "creargrupo") == 0) {
         printf("Creando grupo\n");
@@ -107,33 +112,13 @@ void handle_client(int client_socket, MYSQL *con) {
                 strcpy(groupname, token);
             }
         }
+        const char *group_name = groupname;
+        const char *creator = username;
+        insert_chatroom(con, creator, group_name);
+        send(client_socket, "1", strlen("1"), 0);
     } else {
         printf("Unknown service: %s\n", service);
     }
-
-//    char *token = strtok(combined_credentials, ":");
-//    if (token != NULL) {
-//        strcpy(username, token);
-//        token = strtok(NULL, ":");
-//        if (token != NULL) {
-//            strcpy(password, token);
-//        } else {
-//            fprintf(stderr, "Error: Password not found\n");
-//            close(client_socket);
-//            return;
-//        }
-//    } else {
-//        fprintf(stderr, "Error: Username not found\n");
-//        close(client_socket);
-//        return;
-//    }
-//
-//    if (find_user(con, username, password)) {
-//        send(client_socket, "1", strlen("1"), 0);
-//    } else {
-//        send(client_socket, "0", strlen("0"), 0);
-//    }
-
     close(client_socket);
 }
 
@@ -155,6 +140,10 @@ int main() {
     create_database(con);
     use_database(con);
     create_table(con);
+    const char *table_name = "chatrooms";
+    const char *fields = "creator VARCHAR(255), group_name VARCHAR(255), creation_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP";
+
+    create_table1(con, table_name, fields);
 
     int server_socket, client_socket;
     struct sockaddr_in server_addr, client_addr;

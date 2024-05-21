@@ -33,7 +33,7 @@ int inverse(int a, int mod) {
 }
 
 char* encrypt(char* input_str) {
-    int m, n, e;
+    int n, e;
     unsigned long long int c;
 
     FILE* inp = fopen("public.txt", "r");
