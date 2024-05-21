@@ -94,7 +94,7 @@ uint8_t login(MYSQL *con, const char *username, const char *password) {
     return find_user(con, username, password);
 }
 
-void create_chatroom(MYSQL *con, char *chatroom_name, int user_id) {
+void create_chatroom(MYSQL *con, const char *chatroom_name, int user_id) {
     char *admin_id;
     asprintf(&admin_id, "%d", user_id);
     insert_row(con, "channels", (const char *[][2]) {{"name",             chatroom_name},

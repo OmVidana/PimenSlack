@@ -103,6 +103,12 @@ void create_all_tables(MYSQL *con) {
                                                          "FOREIGN KEY (user_id) REFERENCES users(ID)",
                                                          "FOREIGN KEY (message_id) REFERENCES messages(ID)",
                                                          NULL});
+    create_table(con, "channel_messages", (const char *[]) {"ID INT UNSIGNED AUTO_INCREMENT PRIMARY KEY",
+                                                            "channel_id MEDIUMINT UNSIGNED",
+                                                            "message_id INT UNSIGNED",
+                                                            "FOREIGN KEY (channel_id) REFERENCES channels(ID)",
+                                                            "FOREIGN KEY (message_id) REFERENCES messages(ID)",
+                                                            NULL});
 }
 
 void insert_row(MYSQL *con, const char *table_name, const char *data[][2]) {
