@@ -67,23 +67,60 @@ void create_table(MYSQL *con, const char *table_name, const char *columns[]) {
     printf("%s table created successfully!\n", table_name);
 }
 
+void create_all_tables(MYSQL *con) {
+    // Creación de Tabla Usuarios, Chatrooms y Mensajes
+    create_table(con, "users", (const char *[]) {"ID SMALLINT UNSIGNED AUTO_INCREMENT PRIMARY KEY",
+                                                 "name VARCHAR(16)",
+                                                 "password VARCHAR(16)",
+                                                 "public_encryption_key BIGINT UNSIGNED",
+                                                 "private_encryption_key BIGINT UNSIGNED",
+                                                 "status BOOLEAN",
+                                                 NULL});
+    create_table(con, "channels", (const char *[]) {"ID MEDIUMINT UNSIGNED AUTO_INCREMENT PRIMARY KEY",
+                                                    "name VARCHAR(32)",
+                                                    "administrator_id SMALLINT UNSIGNED",
+                                                    "creation_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
+                                                    "FOREIGN KEY (administrator_id) REFERENCES users(ID)",
+                                                    NULL});
+    create_table(con, "messages", (const char *[]) {"ID INT UNSIGNED AUTO_INCREMENT PRIMARY KEY",
+                                                    "msg TEXT",
+                                                    "sent_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
+                                                    "user_id SMALLINT UNSIGNED",
+                                                    "channel_id MEDIUMINT UNSIGNED",
+                                                    "FOREIGN KEY (user_id) REFERENCES users(ID)",
+                                                    "FOREIGN KEY (channel_id) REFERENCES channels(ID)",
+                                                    NULL});
+    // Tablas de Relación Canales_Usuarios y Usuarios-Mensajes
+    create_table(con, "channels_users", (const char *[]) {"ID INT UNSIGNED AUTO_INCREMENT PRIMARY KEY",
+                                                          "channel_id MEDIUMINT UNSIGNED",
+                                                          "user_id SMALLINT UNSIGNED",
+                                                          "FOREIGN KEY (channel_id) REFERENCES channels(ID)",
+                                                          "FOREIGN KEY (user_id) REFERENCES users(ID)",
+                                                          NULL});
+    create_table(con, "user_messages", (const char *[]) {"ID INT UNSIGNED AUTO_INCREMENT PRIMARY KEY",
+                                                         "user_id SMALLINT UNSIGNED",
+                                                         "message_id INT UNSIGNED",
+                                                         "FOREIGN KEY (user_id) REFERENCES users(ID)",
+                                                         "FOREIGN KEY (message_id) REFERENCES messages(ID)",
+                                                         NULL});
+}
+
 void insert_row(MYSQL *con, const char *table_name, const char *data[][2]) {
     char *insert;
     char *names = "";
     char *values = "";
     asprintf(&insert, "INSERT INTO %s", table_name);
+
     for (int i = 0; data[i][0] != NULL; ++i) {
         if (data[i + 1][0] != NULL) {
             asprintf(&names, "%s%s, ", names, data[i][0]);
             asprintf(&values, "%s'%s', ", values, data[i][1]);
-        }
-        else {
+        } else {
             asprintf(&names, "%s%s", names, data[i][0]);
             asprintf(&values, "%s'%s'", values, data[i][1]);
         }
     }
-    printf("%s\n", names);
-    printf("%s\n", values);
+
     asprintf(&insert, "%s (%s) VALUES (%s);", insert,names, values);
     printf("%s\n", insert);
 
@@ -95,27 +132,33 @@ void insert_row(MYSQL *con, const char *table_name, const char *data[][2]) {
     printf("Data inserted in %s table, successfully!\n", table_name);
 }
 
-bool find_user(MYSQL *con, const char *username, const char *password) {
+uint8_t find_user(MYSQL *con, const char *username, const char *password) {
     MYSQL_RES *result;
     MYSQL_ROW row;
-    char *query; // Ajustamos el tamaño del buffer
-    asprintf(&query, "SELECT * FROM users WHERE name='%s' AND password='%s'", username, password);
+    char *query;
+    uint8_t user_id = 0;
+
+    asprintf(&query, "SELECT ID FROM users WHERE name='%s' AND password='%s';", username, password);
     if (mysql_query(con, query)) {
         fprintf(stderr, "Error finding user: %s\n", mysql_error(con));
-        mysql_close(con);
-        exit(1);
+        free(query);
+        return user_id;
     }
+
+    free(query);
+
     result = mysql_store_result(con);
     if (result == NULL) {
         fprintf(stderr, "No result returned\n");
-        mysql_close(con);
-        exit(1);
+        return user_id;
     }
-    row = mysql_fetch_row(result);
-    if (row == NULL) {
-        return false;
-    } else {
-        return true;
 
+    row = mysql_fetch_row(result);
+    if (row != NULL) {
+        user_id = (uint8_t) atoi(row[0]);
     }
+
+    mysql_free_result(result);
+
+    return user_id;
 }

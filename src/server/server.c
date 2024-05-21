@@ -1,11 +1,12 @@
 /* TO DO:
  * RECV Dynamically
  * Finish Client Loop RECV, SEND
- * REFACTOR find_user to use the new table
- * 
+ * New relation table messages / chatrooms
+ *
 */
 
 // Servidor.c
+#define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -78,16 +79,27 @@ void handle_client(int client_socket, MYSQL *con) {
     close(client_socket);
 }
 
-void register_user() {
-
+void
+register_user(MYSQL *con, const char *name, const char *password, const char *public_key, const char *private_key,
+              char *status) {
+    insert_row(con, "users", (const char *[][2]) {{"name",                   name},
+                                                  {"password",               password},
+                                                  {"public_encryption_key",  public_key},
+                                                  {"private_encryption_key", private_key},
+                                                  {"status",                 status},
+                                                  {NULL, NULL}});
 }
 
-uint8_t login() {
-
+uint8_t login(MYSQL *con, const char *username, const char *password) {
+    return find_user(con, username, password);
 }
 
-void create_chatroom() {
-
+void create_chatroom(MYSQL *con, char *chatroom_name, int user_id) {
+    char *admin_id;
+    asprintf(&admin_id, "%d", user_id);
+    insert_row(con, "channels", (const char *[][2]) {{"name",             chatroom_name},
+                                                     {"administrator_id", admin_id},
+                                                     {NULL, NULL}});
 }
 
 void handle_action(uint8_t user_id, const char *user_response) {
@@ -143,49 +155,11 @@ void kill_children() {
  */
 int main() {
     MYSQL *con = connect_and_create_database();
+    create_all_tables(con);
 
-    // Creación de Tabla Usuarios, Chatrooms y Mensajes
-    create_table(con, "users", (const char *[]) {"ID SMALLINT UNSIGNED AUTO_INCREMENT PRIMARY KEY",
-                                                 "name VARCHAR(16)",
-                                                 "password VARCHAR(16)",
-                                                 "public_encryption_key BIGINT UNSIGNED",
-                                                 "private_encryption_key BIGINT UNSIGNED",
-                                                 "status BOOLEAN",
-                                                 NULL});
-    create_table(con, "channels", (const char *[]) {"ID MEDIUMINT UNSIGNED AUTO_INCREMENT PRIMARY KEY",
-                                                    "name VARCHAR(32)",
-                                                    "administrator_id SMALLINT UNSIGNED",
-                                                    "creation_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
-                                                    "FOREIGN KEY (administrator_id) REFERENCES users(ID)",
-                                                    NULL});
-    create_table(con, "messages", (const char *[]) {"ID INT UNSIGNED AUTO_INCREMENT PRIMARY KEY",
-                                                    "msg TEXT",
-                                                    "sent_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
-                                                    "user_id SMALLINT UNSIGNED",
-                                                    "channel_id MEDIUMINT UNSIGNED",
-                                                    "FOREIGN KEY (user_id) REFERENCES users(ID)",
-                                                    "FOREIGN KEY (channel_id) REFERENCES channels(ID)",
-                                                    NULL});
-    // Tablas de Relación Canales_Usuarios y Usuarios-Mensajes
-    create_table(con, "channels_users", (const char *[]) {"ID INT UNSIGNED AUTO_INCREMENT PRIMARY KEY",
-                                                          "channel_id MEDIUMINT UNSIGNED",
-                                                          "user_id SMALLINT UNSIGNED",
-                                                          "FOREIGN KEY (channel_id) REFERENCES channels(ID)",
-                                                          "FOREIGN KEY (user_id) REFERENCES users(ID)",
-                                                          NULL});
-    create_table(con, "user_messages", (const char *[]) {"ID INT UNSIGNED AUTO_INCREMENT PRIMARY KEY",
-                                                         "user_id SMALLINT UNSIGNED",
-                                                         "message_id INT UNSIGNED",
-                                                         "FOREIGN KEY (user_id) REFERENCES users(ID)",
-                                                         "FOREIGN KEY (message_id) REFERENCES messages(ID)",
-                                                         NULL});
-
-    insert_row(con, "users", (const char *[][2]) {{"name", "testing123"},
-                                                  {"password", "#ed4Mn_e2"},
-                                                  {"public_encryption_key", "11"},
-                                                  {"private_encryption_key", "13"},
-                                                  {"status", "0"},
-                                                  {NULL, NULL}});
+    uint8_t user_id = login(con, "papupro_yt", "cuifanus");
+    printf("User ID: %d\n", user_id);
+    create_chatroom(con, "Los bellakos", user_id);
 
     int server_socket, client_socket;
     struct sockaddr_in server_addr, client_addr;
