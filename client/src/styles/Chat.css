@@ -228,13 +228,7 @@ border: none;
   background-color: #1f1f1f;
 }
 
-.userMsg {
-  background-color: #3f3f7f;
-  color: white;
-  padding: 10px;
-  border-radius: 10px;
-  margin: 5px 0;
-}
+
 
 .message {
   max-width: 60%;
@@ -272,7 +266,7 @@ border: none;
   align-self: flex-start;
   background-color: #ece5dd;
   color: black;
-  border-radius: 7.5px 7.5px 7.5px 0;
+  border-radius: 7.5px 7.5px 0 7.5px;
   padding: 10px 15px;
   position: relative;
   display: inline-block;
@@ -284,8 +278,8 @@ border: none;
   position: absolute;
   top: 0;
   left: -10px;
-  border-width: 10px 0 10px 10px;
+  border-width: 10px  10px 0;
   border-style: solid;
-  border-color: transparent #ece5dd;
+  border-color: #ece5dd transparent;
 }
 

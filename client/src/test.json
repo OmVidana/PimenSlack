@@ -1,28 +1,103 @@
 [
-{
-    "User": "Gabriel",
-    "Message": "Este es mi prueba de mensaje",
-    "Hour": "12:05"
-
-},
-{
-    "User": "Dany",
-    "Message": "Hola Gabrich",
-    "Hour": "7:05"
-},
-{
-    "User": "Diego",
-    "Message": "Dany, te llego mi mensaje?",
-    "Hour": "5:05"
-},
-{
-    "User": "Migue",
-    "Message": "Mande este mensaje a las 5",
-    "Hour": "5:05"
-},
-{
-    "User": "Esparza",
-    "Message": "mensaje prueba",
-    "Hour": "5:05"
-}
-]
+    {
+      "GroupName": "Grupo 1",
+      "User": "Gabriel",
+      "Message": "Este es mi prueba de mensaje",
+      "Hour": "12:05",
+      "messages": [
+        {
+          "sender": "Gabriel",
+          "text": "Hola, ¿cómo están?",
+          "time": "12:00"
+        },
+        {
+          "sender": "Migue",
+          "text": "Todo bien, ¿y tú?",
+          "time": "12:01"
+        },
+        {
+          "sender": "Gabriel",
+          "text": "Bien también, gracias.",
+          "time": "12:02"
+        }
+      ]
+    },
+    {
+      "GroupName": "AAAAA",
+      "User": "Dany",
+      "Message": "Hola Gabrich",
+      "Hour": "7:05",
+      "messages": [
+        {
+          "sender": "Dany",
+          "text": "Hola Gabrich",
+          "time": "7:00"
+        },
+        {
+          "sender": "Gabrich",
+          "text": "Hola Dany, ¿cómo estás?",
+          "time": "7:01"
+        },
+        {
+          "sender": "Dany",
+          "text": "Bien, ¿y tú?",
+          "time": "7:02"
+        }
+      ]
+    },
+    {
+      "GroupName": "Grupo chat",
+      "User": "Diego",
+      "Message": "Dany, te llego mi mensaje?",
+      "Hour": "5:05",
+      "messages": [
+        {
+          "sender": "Diego",
+          "text": "Dany, te llego mi mensaje?",
+          "time": "5:00"
+        },
+        {
+          "sender": "Dany",
+          "text": "Sí, lo recibí.",
+          "time": "5:01"
+        }
+      ]
+    },
+    {
+      "GroupName": "Grupo 4",
+      "User": "Migue",
+      "Message": "Mande este mensaje a las 5",
+      "Hour": "5:05",
+      "messages": [
+        {
+          "sender": "Migue",
+          "text": "Mande este mensaje a las 5",
+          "time": "5:00"
+        },
+        {
+          "sender": "Gabriel",
+          "text": "Recibido, gracias.",
+          "time": "5:01"
+        }
+      ]
+    },
+    {
+      "GroupName": "Grupo prueba 5",
+      "User": "Esparza",
+      "Message": "mensaje prueba",
+      "Hour": "5:05",
+      "messages": [
+        {
+          "sender": "Esparza",
+          "text": "mensaje prueba",
+          "time": "5:00"
+        },
+        {
+          "sender": "Migue",
+          "text": "Prueba recibida.",
+          "time": "5:01"
+        }
+      ]
+    }
+  ]
+  

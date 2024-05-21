@@ -4,25 +4,12 @@ import Data from "../test.json";
 import 'bootstrap-icons/font/bootstrap-icons.css';
 import 'bootstrap/dist/css/bootstrap.css';
 import CreateGroup from '../components/createGroup';
+import ChatCard from '../components/chatCard';
 
 function Chat() {
-  
-  const [userName, setUserName] = useState("");
-  const [messages, setMessages] = useState([]);
-  const [currentMessage, setCurrentMessage] = useState("");
-  const [showModal, setShowModal] = useState(false);
   const [groups, setGroups] = useState(Data);
-
-  const handleInputChange = (event) => {
-    setCurrentMessage(event.target.value);
-  };
-
-  const handleSendClick = () => {
-    if (currentMessage.trim() !== "") {
-      setMessages([...messages, { text: currentMessage, sender: 'user' }]);
-      setCurrentMessage("");
-    }
-  };
+  const [selectedGroup, setSelectedGroup] = useState(null);
+  const [showModal, setShowModal] = useState(false);
 
   const openGroupModal = () => {
     setShowModal(true);
@@ -35,12 +22,23 @@ function Chat() {
   const addGroup = (groupName) => {
     if (groupName.trim() !== "") {
       const newGroup = {
-        User: groupName,
+        GroupName: groupName,
         Message: "Nuevo grupo creado",
-        Hour: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        Hour: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        messages: []
       };
       setGroups([...groups, newGroup]);
     }
+  };
+
+  const selectGroup = (group) => {
+    setSelectedGroup(group);
+  };
+
+  const handleSendMessage = (groupName, message) => {
+    setGroups(groups.map(group =>
+      group.GroupName === groupName ? { ...group, messages: [...group.messages, message] } : group
+    ));
   };
 
   return (
@@ -68,15 +66,15 @@ function Chat() {
             <i className="bi bi-person-fill" style={{ fontSize: 80, color: "#8a8a8a", paddingLeft: 10, display: "flex", paddingTop: 20, position: "relative" }}></i>
             <div className='usernameTag'>Usuario activo</div>
           </div>
-          {groups.map((data, key) => (
-            <button className='messageSelectionBtn' key={key}>
+          {groups.map((group, key) => (
+            <button className='messageSelectionBtn' key={key} onClick={() => selectGroup(group)}>
               <div className='chatCard'>
                 <p className="userName">
-                  {data.User}
-                  <p>{data.Hour}</p>
+                  {group.GroupName}
+                  <p>{group.Hour}</p>
                 </p>
                 <div className='messagePreview'>
-                  {data.Message}
+                  {group.Message}
                 </div>
               </div>
             </button>
@@ -84,38 +82,9 @@ function Chat() {
         </div>
 
         {/* Chat */}
-        <div className='chat'>
-          <div className='nameHeader'>
-            <p className='userNameText'>Grupo de prueba</p>
-            <button className='optionsBtn'>
-              <i className="bi bi-three-dots" style={{ fontSize: 60, color: "#1f1f1f" }}></i>
-            </button>
-          </div>
-
-          <div className='chatHolder'>
-            <div className='messageHolder'>
-              {messages.map((message, index) => (
-                <div key={index} className={`message ${message.sender === 'user' ? 'userMsg' : 'otherMsg'}`}>
-                  {message.text}
-                </div>
-              ))}
-            </div>
-
-            <div className='inputGroup'>
-              <input
-                type="text"
-                className='textPlaceholder'
-                value={currentMessage}
-                onChange={handleInputChange}
-                placeholder='Escribe un mensaje'
-                style={{ fontSize: 35, backgroundColor: "#bfbfbf" }}
-              />
-              <button className='sendBtn' onClick={handleSendClick}>
-                <i className="bi bi-send" style={{ fontSize: 35, color: "#b3b3b3" }}></i>
-              </button>
-            </div>
-          </div>
-        </div>
+        {selectedGroup && (
+          <ChatCard group={selectedGroup} messages={selectedGroup.messages} onSendMessage={handleSendMessage} />
+        )}
       </header>
       <CreateGroup showModal={showModal} closeModal={closeGroupModal} addGroup={addGroup} />
     </div>

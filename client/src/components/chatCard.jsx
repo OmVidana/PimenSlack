@@ -1,12 +1,6 @@
 import React, { useState } from 'react';
-import "../styles/Chat.css";
-import Data from "../test.json";
-import 'bootstrap-icons/font/bootstrap-icons.css';
-import 'bootstrap/dist/css/bootstrap.css';
-import CreateGroup from './createGroup';
 
-function ChatCard({ user, message, hour }) {
-  const [messages, setMessages] = useState([]);
+function ChatCard({ group, messages, onSendMessage }) {
   const [currentMessage, setCurrentMessage] = useState("");
 
   const handleInputChange = (event) => {
@@ -15,7 +9,7 @@ function ChatCard({ user, message, hour }) {
 
   const handleSendClick = () => {
     if (currentMessage.trim() !== "") {
-      setMessages([...messages, { text: currentMessage, sender: 'user' }]);
+      onSendMessage(group.GroupName, { text: currentMessage, sender: 'user' });
       setCurrentMessage("");
     }
   };
@@ -23,13 +17,19 @@ function ChatCard({ user, message, hour }) {
   return (
     <div className='chat'>
       <div className='nameHeader'>
-        <p className='userNameText'>{user}</p>
+        <p className='userNameText'>{group.GroupName}</p>
+        <button className='optionsBtn'>
+          <i className="bi bi-three-dots" style={{ fontSize: 60, color: "#1f1f1f" }}></i>
+        </button>
       </div>
 
       <div className='chatHolder'>
         <div className='messageHolder'>
           {messages.map((message, index) => (
             <div key={index} className={`message ${message.sender === 'user' ? 'userMsg' : 'otherMsg'}`}>
+              <div style={{ fontWeight: "bold", color: "#1f1f1f" }}>
+                {message.sender}
+              </div>
               {message.text}
             </div>
           ))}
