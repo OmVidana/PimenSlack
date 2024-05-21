@@ -22,20 +22,21 @@ MYSQL *connect_and_create_database() {
     if (mysql_real_connect(con, host, user, pass, NULL, port, socket, flags) == NULL) {
         fprintf(stderr, "mysql_real_connect() failed: %s\n", mysql_error(con));
         mysql_close(con);
-        exit(1);
+        exit(EXIT_FAILURE);
     }
 
-    char *create_db_query = "CREATE DATABASE IF NOT EXISTS pimenslack_db";
+    char *create_db_query;
+    asprintf(&create_db_query, "CREATE DATABASE IF NOT EXISTS %s", db);
     if (mysql_query(con, create_db_query)) {
         fprintf(stderr, "Error creating database: %s\n", mysql_error(con));
         mysql_close(con);
-        exit(1);
+        exit(EXIT_FAILURE);
     }
 
     if (mysql_select_db(con, db)) {
         fprintf(stderr, "Error selecting database: %s\n", mysql_error(con));
         mysql_close(con);
-        exit(1);
+        exit(EXIT_FAILURE);
     }
 
     printf("Connected to database %s\n", db);

@@ -1,3 +1,9 @@
+/* TO DO:
+ * RECV Dynamically
+ * Finish Client Loop RECV, SEND
+ *
+*/
+
 // Servidor.c
 #include <stdio.h>
 #include <stdlib.h>
@@ -69,6 +75,44 @@ void handle_client(int client_socket, MYSQL *con) {
     }
 
     close(client_socket);
+}
+
+void handle_action(int user_id, const char *user_response) {
+    //Parsear para obtemer accion, ejemplo /register <name> <password>
+    char *action = ""; //Obtener la accion solamente /register
+    if (strcmp(action, "/register") == 0) {
+        //user_id = register(); // inserta row a users
+    } else if (strcmp(action, "/login") == 0) {
+        //login(); // find_user y activa el usuario
+    } else if (strcmp(action, "/new_chatroom") == 0) {
+        //create_chatroom(); // crea un row de chatroom
+    } else {
+        //Enviar acción no especificada
+    }
+
+
+}
+
+void client_loop(int client_socket) {
+    //Primero envia llave de cifrado para Auth
+    ssize_t sent = send(client_socket, "17", strlen("17"), 0);
+    if (sent == -1) {
+        perror("send error");
+        exit(EXIT_FAILURE);
+    }
+
+    int *user_id;
+    while (true) {
+        char buffer[67000];
+        ssize_t bytes_received = recv(client_socket, buffer, sizeof(buffer), 0);
+
+        if (bytes_received < 0) {
+            fprintf(stderr, "Error receiving data from client\n");
+            continue;
+        }
+        // handle_action(user_id, buffer);
+        
+    }
 }
 
 /**
@@ -160,7 +204,7 @@ int main() {
 
     signal(SIGTERM, kill_children);
 
-    while (1) {
+    while (true) {
         addr_len = sizeof(client_addr);
         client_socket = accept(server_socket, (struct sockaddr *) &client_addr, &addr_len);
         if (client_socket < 0) {
