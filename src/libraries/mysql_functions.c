@@ -97,12 +97,6 @@ void create_all_tables(MYSQL *con) {
                                                           "FOREIGN KEY (channel_id) REFERENCES channels(ID)",
                                                           "FOREIGN KEY (user_id) REFERENCES users(ID)",
                                                           NULL});
-    create_table(con, "user_messages", (const char *[]) {"ID INT UNSIGNED AUTO_INCREMENT PRIMARY KEY",
-                                                         "user_id SMALLINT UNSIGNED",
-                                                         "message_id INT UNSIGNED",
-                                                         "FOREIGN KEY (user_id) REFERENCES users(ID)",
-                                                         "FOREIGN KEY (message_id) REFERENCES messages(ID)",
-                                                         NULL});
     create_table(con, "channel_messages", (const char *[]) {"ID INT UNSIGNED AUTO_INCREMENT PRIMARY KEY",
                                                             "channel_id MEDIUMINT UNSIGNED",
                                                             "message_id INT UNSIGNED",
@@ -111,13 +105,14 @@ void create_all_tables(MYSQL *con) {
                                                             NULL});
 }
 
-void insert_row(MYSQL *con, const char *table_name, const char *data[][2]) {
+int insert_row(MYSQL *con, const char *table_name, const char *data[][2]) {
     char *insert;
     char *names = "";
     char *values = "";
     asprintf(&insert, "INSERT INTO %s", table_name);
-
+    printf("%s\n", insert);
     for (int i = 0; data[i][0] != NULL; ++i) {
+        printf("data: %s, %s\n", data[i][0], data[i][1]);
         if (data[i + 1][0] != NULL) {
             asprintf(&names, "%s%s, ", names, data[i][0]);
             asprintf(&values, "%s'%s', ", values, data[i][1]);
@@ -127,15 +122,21 @@ void insert_row(MYSQL *con, const char *table_name, const char *data[][2]) {
         }
     }
 
-    asprintf(&insert, "%s (%s) VALUES (%s);", insert,names, values);
+    asprintf(&insert, "%s (%s) VALUES (%s);", insert, names, values);
     printf("%s\n", insert);
 
     if (mysql_query(con, insert)) {
         fprintf(stderr, "Error inserting user: %s\n", mysql_error(con));
-        mysql_close(con);
-        exit(1);
+        free(insert);
+        free(names);
+        free(values);
+        return -1;
     }
     printf("Data inserted in %s table, successfully!\n", table_name);
+    free(insert);
+    free(names);
+    free(values);
+    return 0;
 }
 
 uint8_t find_user(MYSQL *con, const char *username, const char *password) {
@@ -162,9 +163,40 @@ uint8_t find_user(MYSQL *con, const char *username, const char *password) {
     row = mysql_fetch_row(result);
     if (row != NULL) {
         user_id = (uint8_t) atoi(row[0]);
+        printf("Successfully Logged In.\n");
     }
 
     mysql_free_result(result);
-
     return user_id;
+}
+
+uint8_t find_chatroom(MYSQL *con, const char *name, const char *admin_id) {
+    MYSQL_RES *result;
+    MYSQL_ROW row;
+    char *query;
+    uint8_t channel_id = 0;
+
+    asprintf(&query, "SELECT ID FROM channels WHERE name='%s' AND administrator_id='%s';", name, admin_id);
+    if (mysql_query(con, query)) {
+        fprintf(stderr, "Error finding Table: %s\n", mysql_error(con));
+        free(query);
+        return channel_id;
+    }
+
+    free(query);
+
+    result = mysql_store_result(con);
+    if (result == NULL) {
+        fprintf(stderr, "No result returned\n");
+        return channel_id;
+    }
+
+    row = mysql_fetch_row(result);
+    if (row != NULL) {
+        channel_id = (uint8_t) atoi(row[0]);
+        printf("Successfully Logged In.\n");
+    }
+
+    mysql_free_result(result);
+    return channel_id;
 }

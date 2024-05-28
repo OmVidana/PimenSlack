@@ -14,8 +14,10 @@ void create_table(MYSQL *con, const char *table_name, const char* columns[]);
 
 void create_all_tables(MYSQL *con);
 
-void insert_row(MYSQL *con, const char *table_name, const char *data[][2]);
+int insert_row(MYSQL *con, const char *table_name, const char *data[][2]);
 
 uint8_t find_user(MYSQL *con, const char *username, const char *password);
+
+uint8_t find_chatroom(MYSQL *con, const char *name, const char *admin_id);
 
 #endif //PIMENSLACK_MYSQL_FUNCTIONS_H
