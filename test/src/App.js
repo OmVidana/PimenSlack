@@ -3,32 +3,42 @@ import React, { useEffect, useState } from 'react';
 const App = () => {
     const [message, setMessage] = useState('');
     const [response, setResponse] = useState('');
+    const [ws, setWs] = useState(null);
 
     useEffect(() => {
-        const ws = new WebSocket('ws://localhost:3001');
+        const socket = new WebSocket('ws://localhost:3001');
 
-        ws.onopen = () => {
+        socket.onopen = () => {
             console.log('Connected to Node.js server');
-            ws.send('Hello from React client');
+            setWs(socket);
         };
 
-        ws.onmessage = (event) => {
+        socket.onmessage = (event) => {
             console.log('Received:', event.data);
             setResponse(event.data);
         };
 
-        ws.onerror = (error) => {
+        socket.onerror = (error) => {
             console.error('WebSocket error:', error);
         };
 
-        ws.onclose = () => {
+        socket.onclose = () => {
             console.log('WebSocket connection closed');
         };
 
         return () => {
-            ws.close();
+            socket.close();
         };
     }, []);
+
+    const sendMessage = () => {
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(message);
+            setMessage(''); // Clear the input field after sending
+        } else {
+            console.log('WebSocket connection not open');
+        }
+    };
 
     return (
         <div>
@@ -39,14 +49,7 @@ const App = () => {
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
             />
-            <button
-                onClick={() => {
-                    const ws = new WebSocket('ws://localhost:3001');
-                    ws.onopen = () => {
-                        ws.send(message);
-                    };
-                }}
-            >
+            <button onClick={sendMessage}>
                 Send Message
             </button>
         </div>

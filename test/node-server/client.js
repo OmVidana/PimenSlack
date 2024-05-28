@@ -1,55 +1,58 @@
+const WebSocket = require('ws');
 const net = require('net');
 
-// C server Docker container IP and port
-const cServerHost = '127.0.0.1'; // Assuming Docker port is exposed to localhost
-const cServerPort = 5000;
+const wss = new WebSocket.Server({ port: 3001 });
 
-// Node.js server port to listen for incoming client connections
-const nodeServerPort = 3001;
+const connectToCServer = (ws) => {
+    const cServerHost = '127.0.0.1'; // Change to Docker container's IP if needed
+    const cServerPort = 5000;
+    let cServerSocket = new net.Socket();
 
-const server = net.createServer((clientSocket) => {
-    console.log('Client connected');
+    const attemptConnection = () => {
+        cServerSocket.connect(cServerPort, cServerHost, () => {
+            console.log('Connected to C server');
+        });
+    };
 
-    // Connect to C server
-    const cServerSocket = new net.Socket();
-    cServerSocket.connect(cServerPort, cServerHost, () => {
-        console.log('Connected to C server');
+    attemptConnection();
+
+    cServerSocket.on('connect', () => {
+        ws.on('message', (message) => {
+            console.log('Received from client:', message);
+            cServerSocket.write(message);
+        });
     });
 
-    // Forward data from client to C server
-    clientSocket.on('data', (data) => {
-        console.log('Data from client:', data.toString());
-        cServerSocket.write(data);
-    });
-
-    // Forward data from C server to client
     cServerSocket.on('data', (data) => {
-        console.log('Data from C server:', data.toString());
-        clientSocket.write(data);
-    });
-
-    // Handle client disconnection
-    clientSocket.on('end', () => {
-        console.log('Client disconnected');
-        cServerSocket.end();
-    });
-
-    // Handle C server disconnection
-    cServerSocket.on('end', () => {
-        console.log('C server disconnected');
-        clientSocket.end();
-    });
-
-    // Error handling
-    clientSocket.on('error', (err) => {
-        console.error('Client socket error:', err);
+        const response = data.toString();
+        console.log('Received from C server:', response);
+        ws.send(response);
     });
 
     cServerSocket.on('error', (err) => {
         console.error('C server socket error:', err);
+        cServerSocket.destroy();
     });
+
+    cServerSocket.on('close', () => {
+        console.log('C server socket closed, attempting to reconnect...');
+        setTimeout(attemptConnection, 5000); // Reconnect after 5 seconds
+    });
+
+    ws.on('close', () => {
+        console.log('WebSocket client disconnected');
+        cServerSocket.end();
+    });
+
+    ws.on('error', (err) => {
+        console.error('WebSocket error:', err);
+        cServerSocket.end();
+    });
+};
+
+wss.on('connection', (ws) => {
+    console.log('WebSocket client connected');
+    connectToCServer(ws);
 });
 
-server.listen(nodeServerPort, () => {
-    console.log(`Node.js server listening on port ${nodeServerPort}`);
-});
+console.log('Node.js WebSocket server listening on port 3001');

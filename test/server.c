@@ -11,7 +11,7 @@ int main() {
     struct sockaddr_in address;
     int addrlen = sizeof(address);
     char buffer[1024] = {0};
-    char *hello = "Hello from server";
+    char response[2048] = {0};
 
     if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0) {
         perror("socket failed");
@@ -38,10 +38,18 @@ int main() {
             exit(EXIT_FAILURE);
         }
 
-        read(new_socket, buffer, 1024);
-        printf("Received: %s\n", buffer);
-        send(new_socket, hello, strlen(hello), 0);
-        printf("Hello message sent\n");
+        while (1) {
+            memset(buffer, 0, sizeof(buffer)); // Clear the buffer before reading
+            int valread = read(new_socket, buffer, 1024);
+            if (valread <= 0) {
+                printf("Client disconnected\n");
+                break;
+            }
+            printf("Received: %s\n", buffer);
+            snprintf(response, sizeof(response), "You sent: %s to the C server", buffer);
+            send(new_socket, response, strlen(response), 0);
+            printf("Response sent\n");
+        }
         close(new_socket);
     }
 
