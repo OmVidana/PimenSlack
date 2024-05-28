@@ -52,103 +52,103 @@ void handle_client(int client_socket, MYSQL *con) {
     char groupname[50];
     int bytes_received;
 
-    char message[] = "Auth/CreateGroup/Exit:";
-    char *ciphertext = encrypt(message);
-    printf("Ciphertext: %s\n", ciphertext);
-    send(client_socket, ciphertext, strlen(ciphertext), 0);
-    bytes_received = recv(client_socket, combined_credentials, sizeof(combined_credentials), 0);
+    while(true){
+        char message[] = "Auth/CreateGroup/Exit:";
+        char *ciphertext = encrypt(message);
+        printf("Ciphertext: %s\n", ciphertext);
+        send(client_socket, ciphertext, strlen(ciphertext), 0);
+        bytes_received = recv(client_socket, combined_credentials, sizeof(combined_credentials), 0);
+        if (bytes_received <= 0) {
+            fprintf(stderr, "Error receiving data from client\n");
+            close(client_socket);
+            continue;
+        }
+        combined_credentials[bytes_received] = '\0';
 
-    if (bytes_received <= 0) {
-        fprintf(stderr, "Error receiving data from client\n");
-        close(client_socket);
-        return;
-    }
-    combined_credentials[bytes_received] = '\0';
+        printf("Credentials received: %s\n", combined_credentials);
+        if (strcmp(combined_credentials, "exit") == 0) {
+            printf("Client requested exit. Closing connection...\n");
+            close(client_socket);
+            kill(getpid(), SIGTERM);
+            break;
+        }
+        char *decoded_credentials = decrypt(combined_credentials);
 
-    printf("Credentials received: %s\n", combined_credentials);
-    if (strcmp(combined_credentials, "exit") == 0) {
+        printf("Decoded credentials: %s\n", decoded_credentials);
 
-        printf("Client requested exit. Closing connection...\n");
-        close(client_socket);
-        kill(getpid(), SIGTERM);
-        return;
-
-    }
-    char *decoded_credentials = decrypt(combined_credentials);
-
-    printf("Decoded credentials: %s\n", decoded_credentials);
-
-    char *token = strtok(decoded_credentials, "\n");
-    if (token != NULL) {
-        strcpy(service, token);
-    }
-
-    if (strcmp(service, "autentificar") == 0) {
-        printf("Handling autentificar\n");
-        token = strtok(NULL, "\n");
+        char *token = strtok(decoded_credentials, "\n");
         if (token != NULL) {
-            strcpy(username, token);
+            strcpy(service, token);
+        }
+
+        if (strcmp(service, "autentificar") == 0) {
+            printf("Handling autentificar\n");
             token = strtok(NULL, "\n");
             if (token != NULL) {
-                strcpy(password, token);
-                if (find_user(con, username, password) != 0) {
-                    char *token_for_user = encrypt(username);
-                    send(client_socket, token_for_user, strlen(token_for_user), 0);
+                strcpy(username, token);
+                token = strtok(NULL, "\n");
+                if (token != NULL) {
+                    strcpy(password, token);
+                    if (find_user(con, username, password) != 0) {
+                        char *token_for_user = encrypt(username);
+                        send(client_socket, token_for_user, strlen(token_for_user), 0);
 
+                    } else {
+                        send(client_socket, "0", strlen("0"), 0);
+                    }
                 } else {
-                    send(client_socket, "0", strlen("0"), 0);
+                    fprintf(stderr, "Error: Password not found\n");
+                    close(client_socket);
+                    return;
                 }
             } else {
-                fprintf(stderr, "Error: Password not found\n");
+                fprintf(stderr, "Error: Username not found\n");
                 close(client_socket);
                 return;
             }
-        } else {
-            fprintf(stderr, "Error: Username not found\n");
-            close(client_socket);
-            return;
-        }
 
 
-    } else if (strcmp(service, "register") == 0) {
-        printf("Registering user\n");
-        token = strtok(NULL, "\n");
-        if (token != NULL) {
-            strcpy(username, token);
+        } else if (strcmp(service, "register") == 0) {
+            printf("Registering user\n");
             token = strtok(NULL, "\n");
             if (token != NULL) {
-                strcpy(password, token);
+                strcpy(username, token);
+                token = strtok(NULL, "\n");
+                if (token != NULL) {
+                    strcpy(password, token);
+                }
             }
-        }
 
-        if (register_user(con, username, password, "0", "0", "0") != -1) {
-            send(client_socket, "1", strlen("1"), 0);
-        } else {
-            send(client_socket, "0", strlen("0"), 0);
-        }
+            if (register_user(con, username, password, "0", "0", "0") != -1) {
+                send(client_socket, "1", strlen("1"), 0);
+            } else {
+                send(client_socket, "0", strlen("0"), 0);
+            }
 
-    } else if (strcmp(service, "creargrupo") == 0) {
-        printf("Creando grupo\n");
-        token = strtok(NULL, "\n");
-        if (token != NULL) {
-            strcpy(username, token);
+        } else if (strcmp(service, "creargrupo") == 0) {
+            printf("Creando grupo\n");
             token = strtok(NULL, "\n");
             if (token != NULL) {
-                strcpy(groupname, token);
+                strcpy(username, token);
+                token = strtok(NULL, "\n");
+                if (token != NULL) {
+                    strcpy(groupname, token);
+                }
             }
-        }
-        const char *group_name = groupname;
-        const char *creator = username;
-        char *chatroom_token;
-        if (create_chatroom(con, group_name, 1) != -1) {
-            asprintf(&chatroom_token, "<%s><%s><%s>", creator, group_name, "true");
-            send(client_socket, chatroom_token, strlen(chatroom_token), 0);
+            const char *group_name = groupname;
+            const char *creator = username;
+            char *chatroom_token;
+            if (create_chatroom(con, group_name, 1) != -1) {
+                asprintf(&chatroom_token, "<%s><%s><%s>", creator, group_name, "true");
+                send(client_socket, chatroom_token, strlen(chatroom_token), 0);
+            } else {
+                asprintf(&chatroom_token, "<%s><%s><%s>", creator, group_name, "false");
+                send(client_socket, chatroom_token, strlen(chatroom_token), 0);
+            }
+            printf("Chatroom created: %s\n", chatroom_token);
         } else {
-            asprintf(&chatroom_token, "<%s><%s><%s>", creator, group_name, "false");
-            send(client_socket, "0", strlen(""), 0);
+            printf("Unknown service: %s\n", service);
         }
-    } else {
-        printf("Unknown service: %s\n", service);
     }
     close(client_socket);
 }

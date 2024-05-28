@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <!-- Ventana de inicio de sesión/registro -->
+  <object class="GtkWindow" id="login_window">
+    <property name="title">Login/Register</property>
+    <child>
+      <object class="GtkBox">
+        <property name="orientation">GTK_ORIENTATION_VERTICAL</property>
+        <child>
+          <object class="GtkEntry" id="username_entry">
+            <property name="placeholder_text">Usuario</property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkEntry" id="password_entry">
+            <property name="placeholder_text">Contraseña</property>
+            <property name="visibility">false</property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkButton" id="login_button">
+            <property name="label">Login</property>
+            <signal name="clicked" handler="on_login_button_clicked" swapped="no"/>
+          </object>
+        </child>
+        <child>
+          <object class="GtkButton" id="register_button">
+            <property name="label">Register</property>
+            <signal name="clicked" handler="on_register_button_clicked" swapped="no"/>
+          </object>
+        </child>
+      </object>
+    </child>
+  </object>
+
+  <!-- Ventana de crear grupo -->
+  <object class="GtkWindow" id="create_group_window">
+    <property name="title">Crear Grupo</property>
+    <!-- Inside the create_group_window -->
+    <child>
+      <object class="GtkBox">
+        <property name="orientation">GTK_ORIENTATION_VERTICAL</property>
+        <child>
+          <object class="GtkEntry" id="groupname_entry">
+            <property name="placeholder_text">Nombre del Grupo</property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkButton" id="create_group_button">
+            <property name="label">Crear Grupo</property>
+            <signal name="clicked" handler="on_create_group_button_clicked" swapped="no"/>
+          </object>
+        </child>
+        <child>
+          <object class="GtkBox" id="card_container">
+            <property name="orientation">GTK_ORIENTATION_VERTICAL</property>
+          </object>
+        </child>
+      </object>
+    </child>
+  </object>
+</interface>

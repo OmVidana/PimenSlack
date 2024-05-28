@@ -9,7 +9,7 @@
 #include "rsa.h"
 
 #define BUFFER_SIZE 2048
-
+u_int8_t running = 1;
 int client_socket;
 struct sockaddr_in server_addr;
 GtkWidget *user_entry_register;
@@ -21,8 +21,8 @@ static void on_register_button_clicked(GtkWidget *widget, gpointer data) {
     const gchar *username = gtk_entry_get_text(GTK_ENTRY(user_entry_register));
     const gchar *password = gtk_entry_get_text(GTK_ENTRY(password_entry_register));
 
-    char combined_credentials[BUFFER_SIZE * 2];
-    snprintf(combined_credentials, sizeof(combined_credentials), "register\n%s\n%s", username, password);
+    char *combined_credentials;
+    asprintf(&combined_credentials, "register\n%s\n%s", username, password);
 
     char *cyphered_credentials = encrypt(combined_credentials);
     send(client_socket, cyphered_credentials, strlen(cyphered_credentials), 0);
@@ -31,14 +31,17 @@ static void on_register_button_clicked(GtkWidget *widget, gpointer data) {
     memset(buffer, 0, BUFFER_SIZE);
     recv(client_socket, buffer, BUFFER_SIZE, 0);
     printf("Server response: %s\n", buffer);
+
+    free(combined_credentials);
+    free(cyphered_credentials);
 }
 
 static void on_login_button_clicked(GtkWidget *widget, gpointer data) {
     const gchar *username = gtk_entry_get_text(GTK_ENTRY(user_entry_register));
     const gchar *password = gtk_entry_get_text(GTK_ENTRY(password_entry_register));
 
-    char combined_credentials[BUFFER_SIZE * 2];
-    snprintf(combined_credentials, sizeof(combined_credentials), "autentificar\n%s\n%s", username, password);
+    char *combined_credentials;
+    asprintf(&combined_credentials, "autentificar\n%s\n%s", username, password);
 
     char *cyphered_credentials = encrypt(combined_credentials);
     send(client_socket, cyphered_credentials, strlen(cyphered_credentials), 0);
@@ -47,6 +50,9 @@ static void on_login_button_clicked(GtkWidget *widget, gpointer data) {
     memset(buffer, 0, BUFFER_SIZE);
     recv(client_socket, buffer, BUFFER_SIZE, 0);
     printf("Server response: %s\n", buffer);
+
+    free(combined_credentials);
+    free(cyphered_credentials);
 }
 
 static void on_create_group_button_clicked(GtkWidget *widget, gpointer data) {
@@ -62,12 +68,16 @@ static void on_create_group_button_clicked(GtkWidget *widget, gpointer data) {
     memset(buffer, 0, BUFFER_SIZE);
     recv(client_socket, buffer, BUFFER_SIZE, 0);
     printf("Server response: %s\n", buffer);
+
+    free(create_group_request);
+    free(cyphered_credentials);
 }
 
 static void on_close_server_button_clicked(GtkWidget *widget, gpointer data) {
     const char *exit_message = "exit";
     send(client_socket, exit_message, strlen(exit_message), 0);
     close(client_socket);
+    running = 0;
     gtk_main_quit();
 }
 
@@ -81,16 +91,13 @@ void activate(GtkApplication *app, gpointer user_data) {
     GtkWidget *register_tab;
     GtkWidget *create_group_tab;
 
-    // Create a new window
     window = gtk_application_window_new(app);
     gtk_window_set_title(GTK_WINDOW(window), "PimenSlack");
     gtk_window_set_default_size(GTK_WINDOW(window), 400, 200);
 
-    // Create a notebook
     notebook = gtk_notebook_new();
     gtk_container_add(GTK_CONTAINER(window), notebook);
 
-    // Create the Register tab
     register_grid = gtk_grid_new();
     gtk_grid_set_row_spacing(GTK_GRID(register_grid), 5);
     gtk_grid_set_column_spacing(GTK_GRID(register_grid), 5);
@@ -99,7 +106,7 @@ void activate(GtkApplication *app, gpointer user_data) {
     GtkWidget *password_label = gtk_label_new("Password:");
     user_entry_register = gtk_entry_new();
     password_entry_register = gtk_entry_new();
-    gtk_entry_set_visibility(GTK_ENTRY(password_entry_register), FALSE); // Hide password
+    gtk_entry_set_visibility(GTK_ENTRY(password_entry_register), FALSE);
 
     gtk_grid_attach(GTK_GRID(register_grid), user_label, 0, 0, 1, 1);
     gtk_grid_attach(GTK_GRID(register_grid), user_entry_register, 1, 0, 1, 1);
@@ -123,7 +130,6 @@ void activate(GtkApplication *app, gpointer user_data) {
     gtk_container_add(GTK_CONTAINER(register_tab), register_grid);
     gtk_notebook_append_page(GTK_NOTEBOOK(notebook), register_tab, register_tab_label);
 
-    // Create the Crear Grupo tab
     create_group_grid = gtk_grid_new();
     gtk_grid_set_row_spacing(GTK_GRID(create_group_grid), 5);
     gtk_grid_set_column_spacing(GTK_GRID(create_group_grid), 5);
@@ -152,10 +158,8 @@ void activate(GtkApplication *app, gpointer user_data) {
     gtk_container_add(GTK_CONTAINER(create_group_tab), create_group_grid);
     gtk_notebook_append_page(GTK_NOTEBOOK(notebook), create_group_tab, create_group_tab_label);
 
-    // Show all widgets
     gtk_widget_show_all(window);
 
-    // Setup socket connection
     client_socket = socket(AF_INET, SOCK_STREAM, 0);
     if (client_socket < 0) {
         perror("Error al crear el socket");
@@ -180,18 +184,19 @@ void activate(GtkApplication *app, gpointer user_data) {
 
     buffer[bytes_received] = '\0';
     char *decrypted = decrypt(buffer);
-    printf("%s", decrypted);
+    printf("%s\n", decrypted);
+    free(decrypted);
 }
 
 int main(int argc, char **argv) {
     GtkApplication *app;
     int status;
-
-    app = gtk_application_new("com.example.GtkApplication", G_APPLICATION_FLAGS_NONE);
-    g_signal_connect(app, "activate", G_CALLBACK(activate), NULL);
-    status = g_application_run(G_APPLICATION(app), argc, argv);
-    g_object_unref(app);
-
+    while (running) {
+        app = gtk_application_new("com.example.GtkApplication", G_APPLICATION_FLAGS_NONE);
+        g_signal_connect(app, "activate", G_CALLBACK(activate), NULL);
+        status = g_application_run(G_APPLICATION(app), argc, argv);
+        g_object_unref(app);
+    }
     close(client_socket);
     return status;
 }
