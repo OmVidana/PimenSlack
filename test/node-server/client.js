@@ -1,33 +1,55 @@
-// node_server.js
-const WebSocket = require('ws');
 const net = require('net');
 
-const wss = new WebSocket.Server({ port: 3001 });
-
-const cServerHost = '127.0.0.1';
+// C server Docker container IP and port
+const cServerHost = '127.0.0.1'; // Assuming Docker port is exposed to localhost
 const cServerPort = 5000;
 
-wss.on('connection', (ws) => {
-  console.log('Client connected to Node.js server');
+// Node.js server port to listen for incoming client connections
+const nodeServerPort = 3001;
 
-  const cServer = net.createConnection({ host: cServerHost, port: cServerPort });
+const server = net.createServer((clientSocket) => {
+    console.log('Client connected');
 
-  cServer.on('connect', () => {
-    console.log('Connected to C server');
-  });
+    // Connect to C server
+    const cServerSocket = new net.Socket();
+    cServerSocket.connect(cServerPort, cServerHost, () => {
+        console.log('Connected to C server');
+    });
 
-  cServer.on('data', (data) => {
-    console.log('Received data from C server:', data.toString());
-    ws.send(data.toString());
-  });
+    // Forward data from client to C server
+    clientSocket.on('data', (data) => {
+        console.log('Data from client:', data.toString());
+        cServerSocket.write(data);
+    });
 
-  ws.on('message', (message) => {
-    console.log('Received message from client:', message);
-    cServer.write(message);
-  });
+    // Forward data from C server to client
+    cServerSocket.on('data', (data) => {
+        console.log('Data from C server:', data.toString());
+        clientSocket.write(data);
+    });
 
-  ws.on('close', () => {
-    console.log('Client disconnected from Node.js server');
-    cServer.end();
-  });
+    // Handle client disconnection
+    clientSocket.on('end', () => {
+        console.log('Client disconnected');
+        cServerSocket.end();
+    });
+
+    // Handle C server disconnection
+    cServerSocket.on('end', () => {
+        console.log('C server disconnected');
+        clientSocket.end();
+    });
+
+    // Error handling
+    clientSocket.on('error', (err) => {
+        console.error('Client socket error:', err);
+    });
+
+    cServerSocket.on('error', (err) => {
+        console.error('C server socket error:', err);
+    });
+});
+
+server.listen(nodeServerPort, () => {
+    console.log(`Node.js server listening on port ${nodeServerPort}`);
 });

@@ -1,34 +1,56 @@
-// TcpClientComponent.js
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
-const TcpClientComponent = () => {
-  const [serverResponse, setServerResponse] = useState('');
-  const ws = new WebSocket('ws://localhost:3001');
+const App = () => {
+    const [message, setMessage] = useState('');
+    const [response, setResponse] = useState('');
 
-  ws.onopen = () => {
-    console.log('Connected to Node.js server');
-  };
+    useEffect(() => {
+        const ws = new WebSocket('ws://localhost:3001');
 
-  ws.onmessage = (event) => {
-    console.log('Received data from Node.js server:', event.data);
-    setServerResponse(event.data);
-  };
+        ws.onopen = () => {
+            console.log('Connected to Node.js server');
+            ws.send('Hello from React client');
+        };
 
-  ws.onclose = () => {
-    console.log('Connection closed');
-  };
+        ws.onmessage = (event) => {
+            console.log('Received:', event.data);
+            setResponse(event.data);
+        };
 
-  const sendMessage = (message) => {
-    console.log('Sending message to Node.js server:', message);
-    ws.send(message);
-  };
+        ws.onerror = (error) => {
+            console.error('WebSocket error:', error);
+        };
 
-  return (
-    <div>
-      <button onClick={() => sendMessage('Hello from React client')}>Send Message</button>
-      <p>Server Response: {serverResponse}</p>
-    </div>
-  );
+        ws.onclose = () => {
+            console.log('WebSocket connection closed');
+        };
+
+        return () => {
+            ws.close();
+        };
+    }, []);
+
+    return (
+        <div>
+            <h1>React WebSocket Client</h1>
+            <p>Message from C server: {response}</p>
+            <input
+                type="text"
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+            />
+            <button
+                onClick={() => {
+                    const ws = new WebSocket('ws://localhost:3001');
+                    ws.onopen = () => {
+                        ws.send(message);
+                    };
+                }}
+            >
+                Send Message
+            </button>
+        </div>
+    );
 };
 
-export default TcpClientComponent;
+export default App;
