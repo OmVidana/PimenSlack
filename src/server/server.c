@@ -1,12 +1,13 @@
 /* TO DO:
- * RECV Dynamically
- * Finish Client Loop RECV, SEND
- * New relation table messages / chatrooms
- *
+ * Avoid duplicate entries Database
+ * Limit amount entries Database
+ * Remove Row
+ * Add to Chatroom
+ * Get Chatroom's I'm in and their respective Data
 */
 
-// Servidor.c
-#define _GNU_SOURCE
+#define  _GNU_SOURCE
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -15,10 +16,72 @@
 #include <unistd.h>
 #include <signal.h>
 #include "mysql_functions.h"
-#include <mysql.h>
+#include <mysql/mysql.h>
+#include "rsa.h"
+#include <cjson/cJSON.h>
 
 #define MAX_CLIENTS 16
-#define BUFFER_SIZE 1024
+#define BUFFER_SIZE 16384
+#define ACTION_SIZE 256
+#define MESSAGE_SIZE 65535
+#define SYNC_DATA "/ync"
+#define LOGIN "login"
+#define REGISTER "register"
+#define CREATE_CHATROOM "createcroom"
+#define REMVF_CHATROOM "cremove"
+#define LEAVE_CHATROOM "cleave"
+#define SEND_MESSAGE "msg"
+#define LOGOUT "exit"
+#define AUTHENTICATED "auth"
+#define ERROR_ACTION "error"
+
+int register_user(MYSQL *con, const char *name, const char *password, const char *public_key, const char *private_key,
+                  const char *status) {
+    return insert_row(con, "users", (const char *[][2]) {{"name",                   name},
+                                                         {"password",               password},
+                                                         {"public_encryption_key",  public_key},
+                                                         {"private_encryption_key", private_key},
+                                                         {"status",                 status},
+                                                         {NULL, NULL}});
+}
+
+uint8_t login(MYSQL *con, const char *username, const char *password) {
+    return find_user(con, username, password);
+}
+
+int create_chatroom(MYSQL *con, const char *chatroom_name, int user_id) {
+    char *admin_id;
+    asprintf(&admin_id, "%d", user_id);
+    insert_row(con, "channels", (const char *[][2]) {{"name",             chatroom_name},
+                                                            {"administrator_id", admin_id},
+                                                            {NULL, NULL}});
+    return find_chatroom(con, chatroom_name, admin_id);
+}
+
+int create_message(MYSQL *con, const char *message, int user_id, int channel_id) {
+    char *sender_id;
+    asprintf(&sender_id, "%d", user_id);
+    char *sender_channel_id;
+    asprintf(&sender_channel_id, "%d", channel_id);
+    return insert_row(con, "messages", (const char *[][2]) {{"msg",        message},
+                                                            {"user_id",    sender_id},
+                                                            {"channel_id", sender_channel_id},
+                                                            {NULL, NULL}});
+
+}
+
+
+
+//TODO
+/*
+ * Group message
+ * Leave chatroom -- If administrator leaves, next user in chatroom will be the new administrator
+ * Add user to chatroom
+ * Request to join chatroom
+ * Remove user from chatroom -- Include users must be administrator
+ * Logout
+ *
+ */
 
 /**
  * @brief Handle client connection and authentication
@@ -26,15 +89,20 @@
  * @param client_socket Client socket descriptor
  * @param con MySQL connection handle
  */
-
 void handle_client(int client_socket, MYSQL *con) {
     char combined_credentials[BUFFER_SIZE];
+    char service[50];
     char username[50];
     char password[50];
+    char groupname[50];
     int bytes_received;
 
-    send(client_socket, "Credentials", strlen("Credentials"), 0);
+    char message[] = "Auth/CreateGroup/Exit:";
+    char *ciphertext = encrypt(message);
+    printf("Ciphertext: %s\n", ciphertext);
+    send(client_socket, ciphertext, strlen(ciphertext), 0);
     bytes_received = recv(client_socket, combined_credentials, sizeof(combined_credentials), 0);
+
     if (bytes_received <= 0) {
         fprintf(stderr, "Error receiving data from client\n");
         close(client_socket);
@@ -43,101 +111,227 @@ void handle_client(int client_socket, MYSQL *con) {
     combined_credentials[bytes_received] = '\0';
 
     printf("Credentials received: %s\n", combined_credentials);
-
     if (strcmp(combined_credentials, "exit") == 0) {
+
         printf("Client requested exit. Closing connection...\n");
         close(client_socket);
         kill(getpid(), SIGTERM);
         return;
+
+    }
+    char *decoded_credentials = decrypt(combined_credentials);
+
+    printf("Decoded credentials: %s\n", decoded_credentials);
+
+    char *token = strtok(decoded_credentials, "\n");
+    if (token != NULL) {
+        strcpy(service, token);
     }
 
-    char *token = strtok(combined_credentials, ":");
-    if (token != NULL) {
-        strcpy(username, token);
-        printf("Username: %s\n", username);
-        token = strtok(NULL, ":");
+    if (strcmp(service, "autentificar") == 0) {
+        printf("Handling autentificar\n");
+        token = strtok(NULL, "\n");
         if (token != NULL) {
-            strcpy(password, token);
-            printf("Password: %s\n", password);
+            strcpy(username, token);
+            token = strtok(NULL, "\n");
+            if (token != NULL) {
+                strcpy(password, token);
+                if (find_user(con, username, password) != 0) {
+                    char *token_for_user = encrypt(username);
+                    send(client_socket, token_for_user, strlen(token_for_user), 0);
+
+                } else {
+                    send(client_socket, "0", strlen("0"), 0);
+                }
+            } else {
+                fprintf(stderr, "Error: Password not found\n");
+                close(client_socket);
+                return;
+            }
         } else {
-            fprintf(stderr, "Error: Password not found\n");
+            fprintf(stderr, "Error: Username not found\n");
             close(client_socket);
             return;
         }
-    } else {
-        fprintf(stderr, "Error: Username not found\n");
-        close(client_socket);
-        return;
-    }
 
-    if (find_user(con, username, password)) {
-        send(client_socket, "1", strlen("0"), 0);
-    } else {
-        send(client_socket, "0", strlen("0"), 0);
-    }
 
+    } else if (strcmp(service, "register") == 0) {
+        printf("Registering user\n");
+        token = strtok(NULL, "\n");
+        if (token != NULL) {
+            strcpy(username, token);
+            token = strtok(NULL, "\n");
+            if (token != NULL) {
+                strcpy(password, token);
+            }
+        }
+
+        if (register_user(con, username, password, "0", "0", "0") != -1) {
+            send(client_socket, "1", strlen("1"), 0);
+        } else {
+            send(client_socket, "0", strlen("0"), 0);
+        }
+
+    } else if (strcmp(service, "creargrupo") == 0) {
+        printf("Creando grupo\n");
+        token = strtok(NULL, "\n");
+        if (token != NULL) {
+            strcpy(username, token);
+            token = strtok(NULL, "\n");
+            if (token != NULL) {
+                strcpy(groupname, token);
+            }
+        }
+        const char *group_name = groupname;
+        const char *creator = username;
+        char *chatroom_token;
+        if (create_chatroom(con, group_name, 1) != -1) {
+            asprintf(&chatroom_token, "<%s><%s><%s>", creator, group_name, "true");
+            send(client_socket, chatroom_token, strlen(chatroom_token), 0);
+        } else {
+            asprintf(&chatroom_token, "<%s><%s><%s>", creator, group_name, "false");
+            send(client_socket, "0", strlen(""), 0);
+        }
+    } else {
+        printf("Unknown service: %s\n", service);
+    }
     close(client_socket);
 }
 
-void
-register_user(MYSQL *con, const char *name, const char *password, const char *public_key, const char *private_key,
-              char *status) {
-    insert_row(con, "users", (const char *[][2]) {{"name",                   name},
-                                                  {"password",               password},
-                                                  {"public_encryption_key",  public_key},
-                                                  {"private_encryption_key", private_key},
-                                                  {"status",                 status},
-                                                  {NULL, NULL}});
-}
-
-uint8_t login(MYSQL *con, const char *username, const char *password) {
-    return find_user(con, username, password);
-}
-
-void create_chatroom(MYSQL *con, const char *chatroom_name, int user_id) {
-    char *admin_id;
-    asprintf(&admin_id, "%d", user_id);
-    insert_row(con, "channels", (const char *[][2]) {{"name",             chatroom_name},
-                                                     {"administrator_id", admin_id},
-                                                     {NULL, NULL}});
-}
-
-void handle_action(uint8_t user_id, const char *user_response) {
-    //Parsear para obtemer accion, ejemplo /register <name> <password>
-    char *action = ""; //Obtener la accion solamente /register
-    if (strcmp(action, "/register") == 0) {
-        //register_user(); // inserta row a users
-    } else if (strcmp(action, "/login") == 0) {
-        //user_id = login(); // find_user y activa el usuario
-    } else if (strcmp(action, "/new_chatroom") == 0) {
-        //create_chatroom(); // crea un row de chatroom
-    } else {
-        //Enviar acción no especificada
+void action_selector(MYSQL *con, int client_socket, const char *action, cJSON *data, bool *connected,
+                     bool *authenticated, uint8_t *user_id) {
+    cJSON *response = cJSON_CreateObject();
+    cJSON *response_data = cJSON_CreateObject();
+    cJSON_AddItemToObject(response, "data", response_data);
+    printf("%d, %d\n", strcmp(action, SEND_MESSAGE), *authenticated);
+    if (strcmp(action, SYNC_DATA) == 0 && *authenticated) {
+        printf("Hola papu\n");
+    } else if (strcmp(action, LOGIN) == 0 && !*authenticated) {
+        *user_id = login(con, cJSON_GetObjectItemCaseSensitive(data, "username")->valuestring,
+                             cJSON_GetObjectItemCaseSensitive(data, "password")->valuestring);
+        if (*user_id == 0) {
+            printf("Invalid username or password\n");
+            cJSON_AddStringToObject(response, "action", ERROR_ACTION);
+            cJSON_AddStringToObject(response_data, "status", "Failure");
+            cJSON_AddStringToObject(response_data, "return", "Invalid username or password.");
+        } else {
+            printf("Successfully logged in with user ID: %d\n", *user_id);
+            cJSON_AddStringToObject(response, "action", AUTHENTICATED);
+            cJSON_AddStringToObject(response_data, "status", "Success");
+            char *user_id_str;
+            asprintf(&user_id_str, "%d", *user_id);
+            cJSON_AddStringToObject(response_data, "return", user_id_str);
+            *authenticated = true;
+            // Set Online DB
+        }
+    } else if (strcmp(action, REGISTER) == 0 && !*authenticated) {
+        const char *username = cJSON_GetObjectItemCaseSensitive(data, "username")->valuestring;
+        const char *password = cJSON_GetObjectItemCaseSensitive(data, "password")->valuestring;
+        if (register_user(con, username, password, "7", "13", "0") == -1) {
+            cJSON_AddStringToObject(response, "action", ERROR_ACTION);
+            cJSON_AddStringToObject(response_data, "status", "failure");
+            cJSON_AddStringToObject(response_data, "return", "User registration failed");
+        } else {
+            printf("Successfully registered in.\n");
+            cJSON_AddStringToObject(response, "action", REGISTER);
+            cJSON_AddStringToObject(response_data, "status", "Success");
+            cJSON_AddStringToObject(response_data, "return", "(Encryption Key) User registered successfully");
+        }
+    } else if (strcmp(action, CREATE_CHATROOM) == 0 && *authenticated) {
+        const char *chatroom_name = cJSON_GetObjectItemCaseSensitive(data, "name")->valuestring;
+        const char *administrator_id = cJSON_GetObjectItemCaseSensitive(data, "administrator_id")->valuestring;
+        int chatroom_id;
+        chatroom_id = create_chatroom(con, chatroom_name, atoi(administrator_id));
+        if (chatroom_id == -1) {
+            printf("Error Chat\n");
+            cJSON_AddStringToObject(response, "action", ERROR_ACTION);
+            cJSON_AddStringToObject(response_data, "status", "Failure");
+            cJSON_AddStringToObject(response_data, "return", "Chatroom creation failed");
+        } else {
+            printf("Success Chat\n");
+            char *chatroom_id_str;
+            asprintf(&chatroom_id_str, "%d", chatroom_id);
+            cJSON_AddStringToObject(response, "action", CREATE_CHATROOM);
+            cJSON_AddStringToObject(response_data, "status", "Success");
+            cJSON_AddStringToObject(response_data, "return", chatroom_id_str);
+        }
+    } else if (strcmp(action, SEND_MESSAGE) == 0 && *authenticated) {
+        const char *message = cJSON_GetObjectItemCaseSensitive(data, "msg")->valuestring;
+        const char *json_user_id = cJSON_GetObjectItemCaseSensitive(data, "user_id")->valuestring;
+        printf("%s\n", message);
+        if (*user_id != (uint8_t) atoi(json_user_id)) return;
+        printf("Pasó\n");
+        const char *channel_id = cJSON_GetObjectItemCaseSensitive(data, "channel_id")->valuestring;
+        if (create_message(con, message, atoi(json_user_id), atoi(channel_id)) == -1) {
+            printf("Message Not Sent\n");
+            cJSON_AddStringToObject(response, "action", ERROR_ACTION);
+            cJSON_AddStringToObject(response_data, "status", "Failure");
+            cJSON_AddStringToObject(response_data, "return", "Message creation failed");
+        } else {
+            printf("Message Sent\n");
+            cJSON_AddStringToObject(response, "action", SEND_MESSAGE);
+            cJSON_AddStringToObject(response_data, "status", "Success");
+            cJSON_AddStringToObject(response_data, "return", "Message sent successfully");
+        }
     }
+        //TODO
+        /*
+         * Group message
+         * Leave chatroom
+         * Add user to chatroom
+         * Request to join chatroom
+         * Remove user from chatroom -- Include users must be administrator
+         * Logout
+         *
+         */
 
+    else if (strcmp(action, REMVF_CHATROOM) == 0 && *authenticated) {
 
+    } else if (strcmp(action, LEAVE_CHATROOM) == 0 && *authenticated) {
+
+    } else if (strcmp(action, LOGOUT) == 0 && *authenticated) {
+        printf("Exiting...\n");
+        *authenticated = false;
+        *connected = false;
+        // Set Offline DB
+        cJSON_AddStringToObject(response, "action", LOGOUT);
+        cJSON_AddStringToObject(response_data, "status", "success");
+        cJSON_AddStringToObject(response_data, "return", "Log In Off...");
+    }
+    char *response_str = cJSON_PrintUnformatted(response);
+    send(client_socket, response_str, strlen(response_str), 0);
+    cJSON_Delete(response);
+    free(response_str);
 }
 
-void client_loop(int client_socket) {
-    //Primero envia llave de cifrado para Auth
-    ssize_t sent = send(client_socket, "17", strlen("17"), 0);
-    if (sent == -1) {
-        perror("send error");
-        exit(EXIT_FAILURE);
-    }
-
-    uint8_t *user_id;
-    while (true) {
-        char buffer[67000];
+void client_loop(MYSQL *con, int client_socket) {
+    cJSON *actionJSON;
+    char buffer[ACTION_SIZE + MESSAGE_SIZE];
+    bool connected = true;
+    bool authenticated = false;
+    uint8_t user_id;
+    while (connected) {
+        memset(buffer, 0, ACTION_SIZE + MESSAGE_SIZE);
         ssize_t bytes_received = recv(client_socket, buffer, sizeof(buffer), 0);
-
-        if (bytes_received < 0) {
-            fprintf(stderr, "Error receiving data from client\n");
+        if (bytes_received <= 0) {
+            perror("Error receiving data from client");
+            memset(buffer, 0, ACTION_SIZE + MESSAGE_SIZE);
             continue;
         }
-        // handle_action(user_id, buffer);
+        buffer[bytes_received] = '\0';
+        printf("Receive Action:\n\t%s\n", buffer);
+        actionJSON = cJSON_Parse(buffer);
+        if (!actionJSON) {
+            printf("Error parsing JSON Action\n");
+            memset(buffer, 0, ACTION_SIZE + MESSAGE_SIZE);
+            connected = false;
+        }
 
+        action_selector(con, client_socket, cJSON_GetObjectItemCaseSensitive(actionJSON, "action")->valuestring,
+                        cJSON_GetObjectItemCaseSensitive(actionJSON, "data"), &connected, &authenticated, &user_id);
     }
+
+    close(client_socket);
 }
 
 /**
@@ -156,10 +350,6 @@ void kill_children() {
 int main() {
     MYSQL *con = connect_and_create_database();
     create_all_tables(con);
-
-    uint8_t user_id = login(con, "papupro_yt", "cuifanus");
-    printf("User ID: %d\n", user_id);
-    create_chatroom(con, "Los bellakos", user_id);
 
     int server_socket, client_socket;
     struct sockaddr_in server_addr, client_addr;
@@ -191,7 +381,7 @@ int main() {
 
     signal(SIGTERM, kill_children);
 
-    while (true) {
+    while (1) {
         addr_len = sizeof(client_addr);
         client_socket = accept(server_socket, (struct sockaddr *) &client_addr, &addr_len);
         if (client_socket < 0) {
@@ -202,7 +392,8 @@ int main() {
         pid_t child_pid = fork();
         if (child_pid == 0) {
             close(server_socket);
-            handle_client(client_socket, con);
+            client_loop(con, client_socket);
+            //handle_client(client_socket, con);
             exit(EXIT_SUCCESS);
         } else if (child_pid < 0) {
             perror("Error creating child process");

@@ -142,29 +142,29 @@ Client/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Client.dir/build.make CMakeFiles/Client.dir/build
 .PHONY : Client/fast
 
-src/client/client.o: src/client/client.c.o
-.PHONY : src/client/client.o
+src/client/client_testing.o: src/client/client_testing.c.o
+.PHONY : src/client/client_testing.o
 
 # target to build an object file
-src/client/client.c.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/Client.dir/build.make CMakeFiles/Client.dir/src/client/client.c.o
-.PHONY : src/client/client.c.o
+src/client/client_testing.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Client.dir/build.make CMakeFiles/Client.dir/src/client/client_testing.c.o
+.PHONY : src/client/client_testing.c.o
 
-src/client/client.i: src/client/client.c.i
-.PHONY : src/client/client.i
+src/client/client_testing.i: src/client/client_testing.c.i
+.PHONY : src/client/client_testing.i
 
 # target to preprocess a source file
-src/client/client.c.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/Client.dir/build.make CMakeFiles/Client.dir/src/client/client.c.i
-.PHONY : src/client/client.c.i
+src/client/client_testing.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Client.dir/build.make CMakeFiles/Client.dir/src/client/client_testing.c.i
+.PHONY : src/client/client_testing.c.i
 
-src/client/client.s: src/client/client.c.s
-.PHONY : src/client/client.s
+src/client/client_testing.s: src/client/client_testing.c.s
+.PHONY : src/client/client_testing.s
 
 # target to generate assembly for a file
-src/client/client.c.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/Client.dir/build.make CMakeFiles/Client.dir/src/client/client.c.s
-.PHONY : src/client/client.c.s
+src/client/client_testing.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Client.dir/build.make CMakeFiles/Client.dir/src/client/client_testing.c.s
+.PHONY : src/client/client_testing.c.s
 
 src/libraries/mysql_functions.o: src/libraries/mysql_functions.c.o
 .PHONY : src/libraries/mysql_functions.o
@@ -224,9 +224,9 @@ help:
 	@echo "... rebuild_cache"
 	@echo "... Client"
 	@echo "... Server"
-	@echo "... src/client/client.o"
-	@echo "... src/client/client.i"
-	@echo "... src/client/client.s"
+	@echo "... src/client/client_testing.o"
+	@echo "... src/client/client_testing.i"
+	@echo "... src/client/client_testing.s"
 	@echo "... src/libraries/mysql_functions.o"
 	@echo "... src/libraries/mysql_functions.i"
 	@echo "... src/libraries/mysql_functions.s"
