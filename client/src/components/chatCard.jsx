@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
-
-function ChatCard({ group, messages, onSendMessage }) {
+import GroupParticipants from './GroupParticipants';
+import "./chatCard.css";
+function ChatCard({ group, onSendMessage, onKickParticipant, onLeaveChat }) {
   const [currentMessage, setCurrentMessage] = useState("");
+  const [showParticipants, setShowParticipants] = useState(false);
+  const [currentGroup, setCurrentGroup] = useState(group);
 
   const handleInputChange = (event) => {
     setCurrentMessage(event.target.value);
@@ -9,30 +12,69 @@ function ChatCard({ group, messages, onSendMessage }) {
 
   const handleSendClick = () => {
     if (currentMessage.trim() !== "") {
-      onSendMessage(group.GroupName, { text: currentMessage, sender: 'user' });
+      const newMessage = {
+        text: currentMessage,
+        sender: 'user',
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      };
+      onSendMessage(group.GroupName, newMessage);
       setCurrentMessage("");
     }
   };
+
+  const handleUpdateGroup = (groupName, updatedParticipants, userLeft) => {
+    if (userLeft) {
+      // Handle user leaving the chat
+      console.log(`User left the chat: ${groupName}`);
+      // Implement additional logic if needed
+    } else {
+      // Update the current group with new participants
+      setCurrentGroup(prevGroup => ({
+        ...prevGroup,
+        Participants: updatedParticipants
+      }));
+    }
+  };
+  
+
+  const handleParticipantsClick = () => {
+    setShowParticipants(!showParticipants);
+    console.log('Participants button clicked');
+    console.log('showParticipants state:', !showParticipants);
+  };
+
+  console.log('Rendering ChatCard with group:', group);
+  console.log('showParticipants state:', showParticipants);
 
   return (
     <div className='chat'>
       <div className='nameHeader'>
         <p className='userNameText'>{group.GroupName}</p>
-        <button className='optionsBtn'>
+        <button className='optionsBtn' onClick={handleParticipantsClick}>
           <i className="bi bi-three-dots" style={{ fontSize: 60, color: "#1f1f1f" }}></i>
         </button>
       </div>
 
       <div className='chatHolder'>
         <div className='messageHolder'>
-          {messages.map((message, index) => (
+          {group.messages.map((message, index) => (
             <div key={index} className={`message ${message.sender === 'user' ? 'userMsg' : 'otherMsg'}`}>
               <div style={{ fontWeight: "bold", color: "#1f1f1f" }}>
                 {message.sender}
               </div>
               {message.text}
+              <div style={{ fontSize: "small", color: "#1f1f1f" }}>
+                {message.time}
+              </div>
             </div>
           ))}
+
+          
+{showParticipants && currentGroup.Participants && (
+        <div className='participantsHolder'>
+          <GroupParticipants group={currentGroup} onUpdateGroup={handleUpdateGroup} />
+        </div>
+      )}
         </div>
 
         <div className='inputGroup'>

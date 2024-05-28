@@ -10,6 +10,7 @@ function MainMenu() {
   return (
     <div className="App">
       <header className="App-header">
+        {/* <div className='cardCover'> */}
         <div>
           <img className = "logo2" src={logo}></img>
         </div>
@@ -19,7 +20,7 @@ function MainMenu() {
           <Link to="/Register">
               <button type="button" className="btnRegister">Registrarse</button>
               </Link>
-
+              {/* </div> */}
       </header>
     </div>
   );

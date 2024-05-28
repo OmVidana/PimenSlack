@@ -41,13 +41,21 @@ function Login() {
         <img className="logo4" src={logo} alt="Logo" />
         {error && <div className="alert alert-danger">{error}</div>}
         <form onSubmit={handleLogin} style={{ padding: 80 }}>
-          <input
-            className='userInput'
-            placeholder='Username'
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-          />
+
+
+        <div className='userNameLogin'>
+            <label>Username</label>
+            <input
+              className='userInput'
+              placeholder='Username'
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+          </div>
+
+          <div className='passwordLogin'>
+            <div>Password</div>
           <input
             className='userInput passwordInput'
             placeholder='Password'
@@ -55,6 +63,7 @@ function Login() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
+          </div>
           <button type="submit" className="btnLogin4">Iniciar Sesión</button>
         </form>
       </header>

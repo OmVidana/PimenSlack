@@ -35,3 +35,10 @@ font-weight: bold;
  font-weight: bold;
  margin-left: 70px;
 }
+
+.userNameRegister{
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 20px;
+  text-align: left;
+}

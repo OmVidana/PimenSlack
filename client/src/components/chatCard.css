@@ -1,0 +1,23 @@
+.participantsHolder {
+  display: flex;
+    position: absolute;
+    align-self: self-end;
+    right: 0;
+    top: 0;
+    width: 300px; 
+    background-color: #555555;  
+    border: 1px solid #555555;
+    z-index: 1000;
+    margin-top: 100px;
+    height: 640px;
+  }
+  
+  .groupParticipants {
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .participant {
+    padding: 5px;
+  }
+  

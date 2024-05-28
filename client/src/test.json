@@ -20,6 +20,17 @@
           "text": "Bien también, gracias.",
           "time": "12:02"
         }
+      ],
+      "Participants": [
+{
+  "User": "Gabriel"
+},
+{
+  "User": "Migue"
+},
+{
+  "User":"Dany"
+}
       ]
     },
     {
@@ -43,6 +54,14 @@
           "text": "Bien, ¿y tú?",
           "time": "7:02"
         }
+      ], 
+      "Participants":[
+        {
+          "User": "Gabrich"
+        },
+        {
+          "User": "Dany"
+        }
       ]
     },
     {
@@ -60,6 +79,14 @@
           "sender": "Dany",
           "text": "Sí, lo recibí.",
           "time": "5:01"
+        }
+      ],
+      "Participants":[
+        {
+          "User": "Dany"
+        },
+        {
+          "User":"Diego"
         }
       ]
     },
@@ -79,7 +106,15 @@
           "text": "Recibido, gracias.",
           "time": "5:01"
         }
-      ]
+      ],
+    "Participants":[
+      {
+        "User": "Gabriel"
+      },
+      {
+        "User": "Migue"
+      }
+    ]
     },
     {
       "GroupName": "Grupo prueba 5",
@@ -97,6 +132,14 @@
           "text": "Prueba recibida.",
           "time": "5:01"
         }
+      ],
+      "Participants":[
+          {
+            "User": "Migue"
+          },
+          {
+            "User": "Esparza"
+          }
       ]
     }
   ]

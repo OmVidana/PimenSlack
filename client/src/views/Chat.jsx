@@ -8,16 +8,25 @@ import ChatCard from '../components/chatCard';
 
 function Chat() {
   const [groups, setGroups] = useState(Data);
-  const [selectedGroup, setSelectedGroup] = useState(null);
-  const [showModal, setShowModal] = useState(false);
+  const [selectedGroupName, setSelectedGroupName] = useState(null);
+  const [showGroupModal, setShowGroupModal] = useState(false);
+  const [showNotificationsModal, setShowNotificationsModal] = useState(false)
 
   const openGroupModal = () => {
-    setShowModal(true);
+    setShowGroupModal(true);
   };
 
   const closeGroupModal = () => {
-    setShowModal(false);
+    setShowGroupModal(false);
   };
+
+  const openNotificationsModal = () => {
+    setShowNotificationsModal(true);
+  }
+
+  const closeNotificationsModal = () => {
+    setShowNotificationsModal(false);
+  }
 
   const addGroup = (groupName) => {
     if (groupName.trim() !== "") {
@@ -31,15 +40,19 @@ function Chat() {
     }
   };
 
-  const selectGroup = (group) => {
-    setSelectedGroup(group);
+  const selectGroup = (groupName) => {
+    setSelectedGroupName(groupName);
   };
 
-  const handleSendMessage = (groupName, message) => {
-    setGroups(groups.map(group =>
-      group.GroupName === groupName ? { ...group, messages: [...group.messages, message] } : group
+  const handleSendMessage = (groupName, newMessage) => {
+    setGroups(groups.map(group => 
+      group.GroupName === groupName 
+        ? { ...group, messages: [...group.messages, newMessage], Message: newMessage.text, Hour: newMessage.time } 
+        : group
     ));
   };
+
+  const selectedGroup = groups.find(group => group.GroupName === selectedGroupName);
 
   return (
     <div className='Login'>
@@ -55,7 +68,7 @@ function Chat() {
             <i className="bi bi-people-fill" style={{ fontSize: 55, color: "#8a8a8a" }} width="200px"></i>
           </button>
           {/* Notifications */}
-          <button className="notificationsBtn">
+          <button className="notificationsBtn" onClick={openNotificationsModal}>
             <i className="bi bi-bell-fill" style={{ fontSize: 55, color: "#8a8a8a" }} width="200px"></i>
           </button>
         </div>
@@ -67,7 +80,7 @@ function Chat() {
             <div className='usernameTag'>Usuario activo</div>
           </div>
           {groups.map((group, key) => (
-            <button className='messageSelectionBtn' key={key} onClick={() => selectGroup(group)}>
+            <button className='messageSelectionBtn' key={key} onClick={() => selectGroup(group.GroupName)}>
               <div className='chatCard'>
                 <p className="userName">
                   {group.GroupName}
@@ -83,10 +96,10 @@ function Chat() {
 
         {/* Chat */}
         {selectedGroup && (
-          <ChatCard group={selectedGroup} messages={selectedGroup.messages} onSendMessage={handleSendMessage} />
+          <ChatCard group={selectedGroup} onSendMessage={handleSendMessage} />
         )}
       </header>
-      <CreateGroup showModal={showModal} closeModal={closeGroupModal} addGroup={addGroup} />
+      <CreateGroup showModal={showGroupModal} closeModal={closeGroupModal} addGroup={addGroup} />
     </div>
   );
 }

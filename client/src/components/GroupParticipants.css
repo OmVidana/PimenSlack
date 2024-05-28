@@ -1,0 +1,68 @@
+.participantsHolder {
+  position: fixed;
+  right: 0;
+  top: 0;
+  width: 300px;  /* Adjust as needed */
+  height: 100%;
+  background-color: #f1f1f1;  /* Adjust as needed */
+  border-left: 1px solid #ccc;
+  padding: 10px;
+  z-index: 1000;
+}
+
+.groupParticipants {
+  display: flex;
+  position: relative;
+  flex-direction: column;
+}
+
+.participant {
+  position: relative;
+  padding: 5px;
+  display: flex;
+  flex-direction: row;
+}
+
+.UserHolder {
+  background-color: #8c8c8c;
+  width: 270px;
+  height: 70px;
+  border-radius: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 10px;
+  margin-bottom: 5px;
+}
+
+.kickButton {
+  background-color: #cfcfcf;
+  width: 50px;
+  height: 50px;
+  border-radius: 30px;
+  border: none;
+  cursor: pointer;
+  font-size: 24px;
+  color: #1f1f1f;
+}
+
+.kickButton i {
+  font-size: 30px;
+  color: #d12227;
+  font-weight: bold;
+  border: #d12227;
+  border-width: 10px;
+}
+
+.leaveBtn{
+  display: flex;
+  margin-top: 300px;
+  position: relative;
+  border-radius: 20px;
+  width: 200px;
+  justify-content: center;
+  align-items: center;
+  margin-left: 35px;
+  background-color: #091643;
+  color: #f1f1f1;
+}

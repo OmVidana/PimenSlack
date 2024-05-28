@@ -54,6 +54,9 @@ function Register() {
         {error && <div className="alert alert-danger">{error}</div>}
         {success && <div className="alert alert-success">{success}</div>}
         <form onSubmit={handleRegister} style={{ padding: 80 }}>
+
+        <div className='userNameRegister'>
+          <div>Username</div>
           <input
             className='userInput'
             placeholder='Username'
@@ -61,6 +64,9 @@ function Register() {
             value={name}
             onChange={(e) => setName(e.target.value)}
           />
+          </div>
+
+          <div className=''></div>
           <input
             className='userInput passwordInput'
             placeholder='Password'
