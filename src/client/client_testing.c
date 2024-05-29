@@ -82,8 +82,8 @@ int main() {
     cJSON *register_json = cJSON_CreateObject();
     cJSON_AddStringToObject(register_json, "action", "register");
     cJSON *register_data = cJSON_CreateObject();
-    cJSON_AddStringToObject(register_data, "username", "patomimo");
-    cJSON_AddStringToObject(register_data, "password", "password1");
+    cJSON_AddStringToObject(register_data, "username", "carlos");
+    cJSON_AddStringToObject(register_data, "password", "1234");
     cJSON_AddItemToObject(register_json, "data", register_data);
     send_json(socket_fd, register_json);
     printf("Register Sent: %s\n", cJSON_Print(register_json));
@@ -101,8 +101,8 @@ int main() {
     cJSON *login_json = cJSON_CreateObject();
     cJSON_AddStringToObject(login_json, "action", "login");
     cJSON *login_data = cJSON_CreateObject();
-    cJSON_AddStringToObject(login_data, "username", "patomimo");
-    cJSON_AddStringToObject(login_data, "password", "password1");
+    cJSON_AddStringToObject(login_data, "username", "carlos");
+    cJSON_AddStringToObject(login_data, "password", "1234");
     cJSON_AddItemToObject(login_json, "data", login_data);
     send_json(socket_fd, login_json);
     printf("LogIn Sent: %s\n", cJSON_Print(login_json));
@@ -138,7 +138,7 @@ int main() {
     cJSON *create_chatroom_json = cJSON_CreateObject();
     cJSON_AddStringToObject(create_chatroom_json, "action", "createcroom");
     cJSON *create_chatroom_data = cJSON_CreateObject();
-    cJSON_AddStringToObject(create_chatroom_data, "name", encrypt("lostilines"));
+    cJSON_AddStringToObject(create_chatroom_data, "name", encrypt("PimenSlack"));
     if (user_id) {
 
         cJSON_AddStringToObject(create_chatroom_data, "administrator_id", encrypt(user_id));
@@ -167,9 +167,9 @@ int main() {
     cJSON *send_message_json = cJSON_CreateObject();
     cJSON_AddStringToObject(send_message_json, "action", "msg");
     cJSON *send_message_data = cJSON_CreateObject();
-    cJSON_AddStringToObject(send_message_data, "msg", "Hello, chatroom!");
+    cJSON_AddStringToObject(send_message_data, "msg", "Hello, patomimo!");
     cJSON_AddStringToObject(send_message_data, "user_id", user_id);
-    cJSON_AddStringToObject(send_message_data, "channel_id", chatroom_id);
+    cJSON_AddStringToObject(send_message_data, "channel_id", "1");
     cJSON_AddItemToObject(send_message_json, "data", send_message_data);
     send_json(socket_fd, send_message_json);
     printf("Message Sent: %s\n", cJSON_Print(send_message_json));

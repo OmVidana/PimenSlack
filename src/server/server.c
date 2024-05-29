@@ -1,11 +1,13 @@
 /* TO DO:
- * Avoid duplicate entries Database
  * Limit amount entries Database
  * Remove Row
  * Add to Chatroom
  * Get Chatroom's I'm in and their respective Data
- * Apply Search Conditions
  * Fill Relation Tables
+ * Sync Fetch all first time login
+ * Sync Fetch chatroom messages when active and refresh message chats
+ * Use sqlite3 In Client or DataStorage webbrowser
+ * GUID <-- varchar(64) identify unique registros, isDeleted tinyint/boolean, Sync Timestamp
 */
 
 #define  _GNU_SOURCE
@@ -23,7 +25,6 @@
 #include <cjson/cJSON.h>
 
 #define MAX_CLIENTS 16
-#define BUFFER_SIZE 16384
 #define ACTION_SIZE 256
 #define MESSAGE_SIZE 65535
 #define SYNC_DATA "sync"
@@ -37,42 +38,6 @@
 #define AUTHENTICATED "auth"
 #define ERROR_ACTION "error"
 
-int register_user(MYSQL *con, const char *name, const char *password, const char *public_key, const char *private_key,
-                  const char *status) {
-    return insert_row(con, "users", (const char *[][2]) {{"name",                   name},
-                                                         {"password",               password},
-                                                         {"public_encryption_key",  public_key},
-                                                         {"private_encryption_key", private_key},
-                                                         {"status",                 status},
-                                                         {NULL, NULL}});
-}
-
-uint8_t login(MYSQL *con, const char *username, const char *password) {
-    return find_user(con, username, password);
-}
-
-int create_chatroom(MYSQL *con, const char *chatroom_name, int user_id) {
-    char *admin_id;
-    asprintf(&admin_id, "%d", user_id);
-    insert_row(con, "channels", (const char *[][2]) {{"name",             chatroom_name},
-                                                     {"administrator_id", admin_id},
-                                                     {NULL, NULL}});
-    return find_chatroom(con, chatroom_name, admin_id);
-}
-
-int create_message(MYSQL *con, const char *message, int user_id, int channel_id) {
-    char *sender_id;
-    asprintf(&sender_id, "%d", user_id);
-    char *sender_channel_id;
-    asprintf(&sender_channel_id, "%d", channel_id);
-    return insert_row(con, "messages", (const char *[][2]) {{"msg",        message},
-                                                            {"user_id",    sender_id},
-                                                            {"channel_id", sender_channel_id}});
-
-}
-
-
-
 //TODO
 /*
  * Group message
@@ -84,119 +49,22 @@ int create_message(MYSQL *con, const char *message, int user_id, int channel_id)
  *
  */
 
-/**
- * @brief Handle client connection and authentication
- *
- * @param client_socket Client socket descriptor
- * @param con MySQL connection handle
- */
-void handle_client(int client_socket, MYSQL *con) {
-    char combined_credentials[BUFFER_SIZE];
-    char service[50];
-    char username[50];
-    char password[50];
-    char groupname[50];
-    int bytes_received;
+cJSON* create_json_from_query(QueryResult *query_result) {
+    cJSON *json_object = cJSON_CreateObject();
+    for (unsigned int i = 0; i < query_result->num_rows; i++) {
+        cJSON *item = cJSON_CreateObject();
+        const char *id = query_result->rows[i][0];
 
-    char message[] = "Auth/CreateGroup/Exit:";
-    char *ciphertext = encrypt(message);
-    printf("Ciphertext: %s\n", ciphertext);
-    send(client_socket, ciphertext, strlen(ciphertext), 0);
-    bytes_received = recv(client_socket, combined_credentials, sizeof(combined_credentials), 0);
+        for (unsigned int j = 1; j < query_result->num_fields; j++) {
+            const char *field_name = query_result->field_names[j];
+            const char *value = query_result->rows[i][j];
+            if (strcmp(query_result->field_names[j], "password") != 0)
+                cJSON_AddStringToObject(item, field_name, value ? value : "NULL");
+        }
 
-    if (bytes_received <= 0) {
-        fprintf(stderr, "Error receiving data from client\n");
-        close(client_socket);
-        return;
+        cJSON_AddItemToObject(json_object, id, item);
     }
-    combined_credentials[bytes_received] = '\0';
-
-    printf("Credentials received: %s\n", combined_credentials);
-    if (strcmp(combined_credentials, "exit") == 0) {
-
-        printf("Client requested exit. Closing connection...\n");
-        close(client_socket);
-        kill(getpid(), SIGTERM);
-        return;
-
-    }
-    char *decoded_credentials = decrypt(combined_credentials);
-
-    printf("Decoded credentials: %s\n", decoded_credentials);
-
-    char *token = strtok(decoded_credentials, "\n");
-    if (token != NULL) {
-        strcpy(service, token);
-    }
-
-    if (strcmp(service, "autentificar") == 0) {
-        printf("Handling autentificar\n");
-        token = strtok(NULL, "\n");
-        if (token != NULL) {
-            strcpy(username, token);
-            token = strtok(NULL, "\n");
-            if (token != NULL) {
-                strcpy(password, token);
-                if (find_user(con, username, password) != 0) {
-                    char *token_for_user = encrypt(username);
-                    send(client_socket, token_for_user, strlen(token_for_user), 0);
-
-                } else {
-                    send(client_socket, "0", strlen("0"), 0);
-                }
-            } else {
-                fprintf(stderr, "Error: Password not found\n");
-                close(client_socket);
-                return;
-            }
-        } else {
-            fprintf(stderr, "Error: Username not found\n");
-            close(client_socket);
-            return;
-        }
-
-
-    } else if (strcmp(service, "register") == 0) {
-        printf("Registering user\n");
-        token = strtok(NULL, "\n");
-        if (token != NULL) {
-            strcpy(username, token);
-            token = strtok(NULL, "\n");
-            if (token != NULL) {
-                strcpy(password, token);
-            }
-        }
-
-        if (register_user(con, username, password, "0", "0", "0") != -1) {
-            send(client_socket, "1", strlen("1"), 0);
-        } else {
-            send(client_socket, "0", strlen("0"), 0);
-        }
-
-    } else if (strcmp(service, "creargrupo") == 0) {
-        printf("Creando grupo\n");
-        token = strtok(NULL, "\n");
-        if (token != NULL) {
-            strcpy(username, token);
-            token = strtok(NULL, "\n");
-            if (token != NULL) {
-                strcpy(groupname, token);
-            }
-        }
-        const char *group_name = groupname;
-        const char *creator = username;
-        char *chatroom_token;
-        if (create_chatroom(con, group_name, 1) != -1) {
-            asprintf(&chatroom_token, "<%s><%s><%s>", creator, group_name, "true");
-            send(client_socket, chatroom_token, strlen(chatroom_token), 0);
-        } else {
-            asprintf(&chatroom_token, "<%s><%s><%s>", creator, group_name, "false");
-            send(client_socket, "0", strlen(""), 0);
-        }
-    } else {
-        printf("Unknown service: %s\n", service);
-    }
-    close(client_socket);
+    return json_object;
 }
 
 void action_selector(MYSQL *con, int client_socket, const char *action, cJSON *data, bool *connected, bool *authenticated,
@@ -208,37 +76,48 @@ void action_selector(MYSQL *con, int client_socket, const char *action, cJSON *d
     if (strcmp(action, SYNC_DATA) == 0 && *authenticated) {
         printf("Syncing data\n");
 
+        QueryResult *users = fetch_users(con, NULL);
+        cJSON *users_json = create_json_from_query(users);
+        free_query_result(users);
+        //donde este tu id
         QueryResult *chatrooms = fetch_chatrooms(con, NULL);
-
-        cJSON *sync_json = cJSON_CreateObject();
-        cJSON *sync_data = cJSON_CreateObject();
         cJSON *chatrooms_json = cJSON_CreateObject();
-
         for (unsigned int i = 0; i < chatrooms->num_rows; i++) {
-            cJSON *chatroom = cJSON_CreateObject();
+            cJSON *item = cJSON_CreateObject();
             const char *id = chatrooms->rows[i][0];
-
             for (unsigned int j = 1; j < chatrooms->num_fields; j++) {
                 const char *field_name = chatrooms->field_names[j];
                 const char *value = chatrooms->rows[i][j];
-                cJSON_AddStringToObject(chatroom, field_name, value ? value : "NULL");
+                cJSON_AddStringToObject(item, field_name, value ? value : "NULL");
             }
+            char *condition;
+            asprintf(&condition, "channel_id = '%s'", id);
+            printf("%s", condition);
 
-            cJSON_AddItemToObject(chatrooms_json, id, chatroom);
+            QueryResult *messages = fetch_messages(con, condition);
+            cJSON *messages_json = create_json_from_query(messages);
+            cJSON_AddItemToObject(item, "messages", messages_json);
+            free_query_result(messages);
+
+            QueryResult *users = fetch_chatroom_users(con, condition);
+            cJSON *users_json = create_json_from_query(users);
+            cJSON_AddItemToObject(item, "users", users_json);
+            free_query_result(users);
+
+            cJSON_AddItemToObject(chatrooms_json, id, item);
         }
-        free_query_result(chatrooms);
 
+        cJSON *sync_json = cJSON_CreateObject();
+        cJSON *sync_data = cJSON_CreateObject();
+        cJSON_AddItemToObject(sync_data, "users", users_json);
         cJSON_AddItemToObject(sync_data, "chatrooms", chatrooms_json);
         cJSON_AddStringToObject(sync_json, "action", "sync");
-        cJSON_AddItemToObject(sync_json, "data", data);
+        cJSON_AddItemToObject(sync_json, "data", sync_data);
 
         char *json_str = cJSON_PrintUnformatted(sync_json);
-
         send(client_socket, json_str, strlen(json_str), 0);
         free(json_str);
         cJSON_Delete(sync_json);
-        // Enlistar todos los chatroom --> donde esta el user_id
-        // Enlistar todos los mensajes de estos chatroom
 
     } else if (strcmp(action, LOGIN) == 0 && !*authenticated) {
         //Recibir las keys de encrypt
@@ -289,15 +168,15 @@ void action_selector(MYSQL *con, int client_socket, const char *action, cJSON *d
     } else if (strcmp(action, REGISTER) == 0 && !*authenticated) {
         const char *username = cJSON_GetObjectItemCaseSensitive(data, "username")->valuestring;
         const char *password = cJSON_GetObjectItemCaseSensitive(data, "password")->valuestring;
-        if (register_user(con, username, password, "7", "13", "0") == -1) {
+        if (register_user(con, username, password, "0") == -1) {
             cJSON_AddStringToObject(response, "action", ERROR_ACTION);
-            cJSON_AddStringToObject(response_data, "status", "failure");
+            cJSON_AddStringToObject(response_data, "status", "Failure");
             cJSON_AddStringToObject(response_data, "return", "User registration failed");
         } else {
             printf("Successfully registered in.\n");
             cJSON_AddStringToObject(response, "action", REGISTER);
             cJSON_AddStringToObject(response_data, "status", "Success");
-            cJSON_AddStringToObject(response_data, "return", "(Encryption Key) User registered successfully");
+            cJSON_AddStringToObject(response_data, "return", "User registered successfully");
         }
     } else if (strcmp(action, CREATE_CHATROOM) == 0 && *authenticated) {
         char *chatroom_name = cJSON_GetObjectItemCaseSensitive(data, "name")->valuestring;
@@ -305,7 +184,8 @@ void action_selector(MYSQL *con, int client_socket, const char *action, cJSON *d
         char *administrator_id = cJSON_GetObjectItemCaseSensitive(data, "administrator_id")->valuestring;
         administrator_id = decrypt(administrator_id);
         int chatroom_id;
-        chatroom_id = create_chatroom(con, chatroom_name, atoi(administrator_id));
+        chatroom_id = create_channel(con, chatroom_name, atoi(administrator_id));
+        // -- agregar a la tabla chatroom_users
         if (chatroom_id == -1) {
             printf("Error Chat\n");
             cJSON_AddStringToObject(response, "action", ERROR_ACTION);
@@ -313,8 +193,10 @@ void action_selector(MYSQL *con, int client_socket, const char *action, cJSON *d
             cJSON_AddStringToObject(response_data, "return", "Chatroom creation failed");
         } else {
             printf("Success Chat\n");
+            // -- agregar a la tabla chatroom_users
             char *chatroom_id_str;
             asprintf(&chatroom_id_str, "%d", chatroom_id);
+            insert_row_channels_users(con, chatroom_id_str, administrator_id, "0");
             cJSON_AddStringToObject(response, "action", CREATE_CHATROOM);
             cJSON_AddStringToObject(response_data, "status", "Success");
             cJSON_AddStringToObject(response_data, "return", chatroom_id_str);
@@ -324,7 +206,7 @@ void action_selector(MYSQL *con, int client_socket, const char *action, cJSON *d
         const char *json_user_id = cJSON_GetObjectItemCaseSensitive(data, "user_id")->valuestring;
         printf("%s\n", message);
         if (*user_id != (uint8_t) atoi(json_user_id)) return;
-        printf("Pasó\n");
+
         const char *channel_id = cJSON_GetObjectItemCaseSensitive(data, "channel_id")->valuestring;
         if (create_message(con, message, atoi(json_user_id), atoi(channel_id)) == -1) {
             printf("Message Not Sent\n");
@@ -332,6 +214,7 @@ void action_selector(MYSQL *con, int client_socket, const char *action, cJSON *d
             cJSON_AddStringToObject(response_data, "status", "Failure");
             cJSON_AddStringToObject(response_data, "return", "Message creation failed");
         } else {
+            // -- Agregar a tabla chatroom_messages
             printf("Message Sent\n");
             cJSON_AddStringToObject(response, "action", SEND_MESSAGE);
             cJSON_AddStringToObject(response_data, "status", "Success");
@@ -414,6 +297,10 @@ void kill_children() {
 int main() {
     MYSQL *con = connect_and_create_database();
     create_all_tables(con);
+
+    create_adjective_and_noun_tables(con);
+
+
     int server_socket, client_socket;
     struct sockaddr_in server_addr, client_addr;
     socklen_t addr_len;
@@ -440,7 +327,7 @@ int main() {
     }
 
     listen(server_socket, MAX_CLIENTS);
-    printf("Server started and listening on port 8080\n");
+    printf("Server started and listening on port 8080 skibidi mewing sigma digital fornite chamba\n");
 
     signal(SIGTERM, kill_children);
 
@@ -456,7 +343,6 @@ int main() {
         if (child_pid == 0) {
             close(server_socket);
             client_loop(con, client_socket);
-            //handle_client(client_socket, con);
             exit(EXIT_SUCCESS);
         } else if (child_pid < 0) {
             perror("Error creating child process");
