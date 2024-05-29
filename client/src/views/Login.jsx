@@ -26,6 +26,7 @@ function Login() {
     if (user) {
       setError('');
       sendMessage({ action: 'login', data:{username: user.Username, password: user.Password} });
+      navigate('/Chat');
     } else {
       setError('Invalid username or password');
     }
@@ -43,15 +44,15 @@ function Login() {
     }
   };
 
-  useEffect(() => {
-    const handleMessage = (message) => {
-      handleServerMessage(message);
-    };
-    sendMessage.subscribe(handleMessage);
-    return () => {
-      sendMessage.unsubscribe(handleMessage);
-    };
-  }, [sendMessage]);
+  // useEffect(() => {
+  //   const handleMessage = (message) => {
+  //     handleServerMessage(message);
+  //   };
+  //   sendMessage.subscribe(handleMessage);
+  //   return () => {
+  //     sendMessage.unsubscribe(handleMessage);
+  //   };
+  // }, [sendMessage]);
 
   return (
     <div className='Login'>

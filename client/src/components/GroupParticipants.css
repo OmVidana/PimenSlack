@@ -62,7 +62,18 @@
   width: 200px;
   justify-content: center;
   align-items: center;
-  margin-left: 35px;
   background-color: #091643;
   color: #f1f1f1;
+}
+
+.optionsContainer{
+display: flex;
+}
+
+.addParticipants{
+height: 70px;
+width: 70px;
+border: #1f1f1f;
+border-radius: 80px;
+margin-top: 300px;
 }

@@ -1,10 +1,24 @@
 import React, { useState } from 'react';
 import "./GroupParticipants.css";
+import Data from "../test.json";
+
 import { useWebSocket } from '../components/WebSocketConnection';  
+import ActiveUsers from '../components/activeUsers';
 
 function GroupParticipants({ group, onUpdateGroup }) {
   const [participants, setParticipants] = useState(group.Participants);
+  const [showActiveUsersModal, setShowActiveUsersModal] = useState(false);
+  const [user, setUser] = useState("Gabriel"); 
+  const [groups, setGroups] = useState(Data);
   const sendMessage = useWebSocket();
+
+  const openActiveUsersModal = () => {
+    setShowActiveUsersModal(true);
+  };
+
+  const closeActiveUsersModal = () => {
+    setShowActiveUsersModal(false);
+  };
 
   const handleKickParticipant = (groupName, userName) => {
     const updatedParticipants = participants.filter(participant => participant.User !== userName);
@@ -36,9 +50,15 @@ function GroupParticipants({ group, onUpdateGroup }) {
           </div>
         </div>
       ))}
+      
+      <div className='optionsContainer'>
       <button onClick={() => handleLeaveChat(group.GroupName)} className='leaveBtn'>Leave Chat</button>
+      <button onClick={openActiveUsersModal} className='addParticipants'><i class="bi bi-person-plus"></i></button>
+      </div>
+      <ActiveUsers showModal={showActiveUsersModal} closeModal={closeActiveUsersModal} user={user} groups={groups}/>
     </div>
-  );
+
+);
 }
 
 export default GroupParticipants;
