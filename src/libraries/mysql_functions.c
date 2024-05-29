@@ -12,6 +12,14 @@ static char *socket = NULL;
 unsigned int port = 3306;
 unsigned int flags = 0;
 
+typedef struct {
+    char ***rows;
+    unsigned int num_rows;
+    unsigned int num_fields;
+    char **field_names;
+} QueryResult;
+
+
 MYSQL *connect_and_create_database() {
     MYSQL *con = mysql_init(NULL);
     if (con == NULL) {
@@ -72,8 +80,6 @@ void create_all_tables(MYSQL *con) {
     create_table(con, "users", (const char *[]) {"ID SMALLINT UNSIGNED AUTO_INCREMENT PRIMARY KEY",
                                                  "name VARCHAR(16)",
                                                  "password VARCHAR(16)",
-                                                 "public_encryption_key BIGINT UNSIGNED",
-                                                 "private_encryption_key BIGINT UNSIGNED",
                                                  "status BOOLEAN",
                                                  NULL});
     create_table(con, "channels", (const char *[]) {"ID MEDIUMINT UNSIGNED AUTO_INCREMENT PRIMARY KEY",
@@ -139,6 +145,70 @@ int insert_row(MYSQL *con, const char *table_name, const char *data[][2]) {
     return 0;
 }
 
+QueryResult *fetch_records(MYSQL *con, const char *table_name, const char *conditions) {
+    char query[512];
+    MYSQL_RES *result;
+    MYSQL_ROW row;
+    MYSQL_FIELD *field;
+    unsigned int num_fields;
+    unsigned int num_rows = 0;
+    unsigned int i, j;
+
+    if (conditions && strlen(conditions) > 0) {
+        snprintf(query, sizeof(query), "SELECT * FROM %s WHERE %s", table_name, conditions);
+    } else {
+        snprintf(query, sizeof(query), "SELECT * FROM %s", table_name);
+    }
+
+    if (mysql_query(con, query)) {
+        fprintf(stderr, "Error retrieving data: %s\n", mysql_error(con));
+        return NULL;
+    }
+
+    result = mysql_store_result(con);
+    if (result == NULL) {
+        fprintf(stderr, "Error storing result: %s\n", mysql_error(con));
+        return NULL;
+    }
+
+    num_fields = mysql_num_fields(result);
+    num_rows = mysql_num_rows(result);
+
+    QueryResult *query_result = malloc(sizeof(QueryResult));
+    query_result->num_fields = num_fields;
+    query_result->num_rows = num_rows;
+    query_result->rows = malloc(num_rows * sizeof(char **));
+    query_result->field_names = malloc(num_fields * sizeof(char *));
+
+    // Store field names
+    for (i = 0; (field = mysql_fetch_field(result)); i++) {
+        query_result->field_names[i] = strdup(field->name);
+    }
+
+    for (i = 0; (row = mysql_fetch_row(result)); i++) {
+        query_result->rows[i] = malloc(num_fields * sizeof(char *));
+        for (j = 0; j < num_fields; j++) {
+            query_result->rows[i][j] = row[j] ? strdup(row[j]) : NULL;
+        }
+    }
+
+    mysql_free_result(result);
+    return query_result;
+}
+
+void free_query_result(QueryResult *query_result) {
+    if (query_result) {
+        for (unsigned int i = 0; i < query_result->num_rows; i++) {
+            for (unsigned int j = 0; j < query_result->num_fields; j++) {
+                free(query_result->rows[i][j]);
+            }
+            free(query_result->rows[i]);
+        }
+        free(query_result->rows);
+        free(query_result);
+    }
+}
+
 uint8_t find_user(MYSQL *con, const char *username, const char *password) {
     MYSQL_RES *result;
     MYSQL_ROW row;
@@ -199,4 +269,20 @@ uint8_t find_chatroom(MYSQL *con, const char *name, const char *admin_id) {
 
     mysql_free_result(result);
     return channel_id;
+}
+
+QueryResult *fetch_chatrooms(MYSQL *con, const char *conditions) {
+    if (conditions && strlen(conditions) > 0) {
+        return fetch_records(con, "channels", conditions);
+    } else {
+        return fetch_records(con, "channels", NULL);
+    }
+}
+
+QueryResult *fetch_messages(MYSQL *con, const char *conditions) {
+    if (conditions && strlen(conditions) > 0) {
+        return fetch_records(con, "messages", conditions);
+    } else {
+        return fetch_records(con, "messages", NULL);
+    }
 }

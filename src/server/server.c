@@ -4,6 +4,8 @@
  * Remove Row
  * Add to Chatroom
  * Get Chatroom's I'm in and their respective Data
+ * Apply Search Conditions
+ * Fill Relation Tables
 */
 
 #define  _GNU_SOURCE
@@ -15,16 +17,16 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <signal.h>
+#include "rsa.h"
 #include "mysql_functions.h"
 #include <mysql/mysql.h>
-#include "rsa.h"
 #include <cjson/cJSON.h>
 
 #define MAX_CLIENTS 16
 #define BUFFER_SIZE 16384
 #define ACTION_SIZE 256
 #define MESSAGE_SIZE 65535
-#define SYNC_DATA "/ync"
+#define SYNC_DATA "sync"
 #define LOGIN "login"
 #define REGISTER "register"
 #define CREATE_CHATROOM "createcroom"
@@ -53,8 +55,8 @@ int create_chatroom(MYSQL *con, const char *chatroom_name, int user_id) {
     char *admin_id;
     asprintf(&admin_id, "%d", user_id);
     insert_row(con, "channels", (const char *[][2]) {{"name",             chatroom_name},
-                                                            {"administrator_id", admin_id},
-                                                            {NULL, NULL}});
+                                                     {"administrator_id", admin_id},
+                                                     {NULL, NULL}});
     return find_chatroom(con, chatroom_name, admin_id);
 }
 
@@ -65,8 +67,7 @@ int create_message(MYSQL *con, const char *message, int user_id, int channel_id)
     asprintf(&sender_channel_id, "%d", channel_id);
     return insert_row(con, "messages", (const char *[][2]) {{"msg",        message},
                                                             {"user_id",    sender_id},
-                                                            {"channel_id", sender_channel_id},
-                                                            {NULL, NULL}});
+                                                            {"channel_id", sender_channel_id}});
 
 }
 
@@ -198,17 +199,51 @@ void handle_client(int client_socket, MYSQL *con) {
     close(client_socket);
 }
 
-void action_selector(MYSQL *con, int client_socket, const char *action, cJSON *data, bool *connected,
-                     bool *authenticated, uint8_t *user_id) {
+void action_selector(MYSQL *con, int client_socket, const char *action, cJSON *data, bool *connected, bool *authenticated,
+                uint8_t *user_id) {
     cJSON *response = cJSON_CreateObject();
     cJSON *response_data = cJSON_CreateObject();
     cJSON_AddItemToObject(response, "data", response_data);
-    printf("%d, %d\n", strcmp(action, SEND_MESSAGE), *authenticated);
+
     if (strcmp(action, SYNC_DATA) == 0 && *authenticated) {
-        printf("Hola papu\n");
+        printf("Syncing data\n");
+
+        QueryResult *chatrooms = fetch_chatrooms(con, NULL);
+
+        cJSON *sync_json = cJSON_CreateObject();
+        cJSON *sync_data = cJSON_CreateObject();
+        cJSON *chatrooms_json = cJSON_CreateObject();
+
+        for (unsigned int i = 0; i < chatrooms->num_rows; i++) {
+            cJSON *chatroom = cJSON_CreateObject();
+            const char *id = chatrooms->rows[i][0];
+
+            for (unsigned int j = 1; j < chatrooms->num_fields; j++) {
+                const char *field_name = chatrooms->field_names[j];
+                const char *value = chatrooms->rows[i][j];
+                cJSON_AddStringToObject(chatroom, field_name, value ? value : "NULL");
+            }
+
+            cJSON_AddItemToObject(chatrooms_json, id, chatroom);
+        }
+        free_query_result(chatrooms);
+
+        cJSON_AddItemToObject(sync_data, "chatrooms", chatrooms_json);
+        cJSON_AddStringToObject(sync_json, "action", "sync");
+        cJSON_AddItemToObject(sync_json, "data", data);
+
+        char *json_str = cJSON_PrintUnformatted(sync_json);
+
+        send(client_socket, json_str, strlen(json_str), 0);
+        free(json_str);
+        cJSON_Delete(sync_json);
+        // Enlistar todos los chatroom --> donde esta el user_id
+        // Enlistar todos los mensajes de estos chatroom
+
     } else if (strcmp(action, LOGIN) == 0 && !*authenticated) {
+        //Recibir las keys de encrypt
         *user_id = login(con, cJSON_GetObjectItemCaseSensitive(data, "username")->valuestring,
-                             cJSON_GetObjectItemCaseSensitive(data, "password")->valuestring);
+                         cJSON_GetObjectItemCaseSensitive(data, "password")->valuestring);
         if (*user_id == 0) {
             printf("Invalid username or password\n");
             cJSON_AddStringToObject(response, "action", ERROR_ACTION);
@@ -220,8 +255,35 @@ void action_selector(MYSQL *con, int client_socket, const char *action, cJSON *d
             cJSON_AddStringToObject(response_data, "status", "Success");
             char *user_id_str;
             asprintf(&user_id_str, "%d", *user_id);
-            cJSON_AddStringToObject(response_data, "return", user_id_str);
+
+            FILE *f = fopen("public.txt", "r");
+            if (f == NULL) {
+                perror("Failed to open file");
+            }
+
+            char *public_key = malloc(1024 * sizeof(char));
+            if (public_key == NULL) {
+                perror("Failed to allocate memory");
+                fclose(f);
+            }
+
+            if (fgets(public_key, 1024, f) != NULL) {
+                size_t len = strlen(public_key);
+                if (len > 0 && public_key[len - 1] == '\n') {
+                    public_key[len - 1] = '\0';
+                }
+                printf("Public Key: %s\n", public_key);
+            } else {
+                perror("Failed to read from file");
+            }
+
+            fclose(f);
+
+
+            cJSON_AddStringToObject(response_data, "user_id", user_id_str);
+            cJSON_AddStringToObject(response_data, "public_key", public_key);
             *authenticated = true;
+            free(public_key);
             // Set Online DB
         }
     } else if (strcmp(action, REGISTER) == 0 && !*authenticated) {
@@ -238,8 +300,10 @@ void action_selector(MYSQL *con, int client_socket, const char *action, cJSON *d
             cJSON_AddStringToObject(response_data, "return", "(Encryption Key) User registered successfully");
         }
     } else if (strcmp(action, CREATE_CHATROOM) == 0 && *authenticated) {
-        const char *chatroom_name = cJSON_GetObjectItemCaseSensitive(data, "name")->valuestring;
-        const char *administrator_id = cJSON_GetObjectItemCaseSensitive(data, "administrator_id")->valuestring;
+        char *chatroom_name = cJSON_GetObjectItemCaseSensitive(data, "name")->valuestring;
+        chatroom_name = decrypt(chatroom_name);
+        char *administrator_id = cJSON_GetObjectItemCaseSensitive(data, "administrator_id")->valuestring;
+        administrator_id = decrypt(administrator_id);
         int chatroom_id;
         chatroom_id = create_chatroom(con, chatroom_name, atoi(administrator_id));
         if (chatroom_id == -1) {
@@ -316,7 +380,7 @@ void client_loop(MYSQL *con, int client_socket) {
         if (bytes_received <= 0) {
             perror("Error receiving data from client");
             memset(buffer, 0, ACTION_SIZE + MESSAGE_SIZE);
-            continue;
+            break;
         }
         buffer[bytes_received] = '\0';
         printf("Receive Action:\n\t%s\n", buffer);
@@ -350,7 +414,6 @@ void kill_children() {
 int main() {
     MYSQL *con = connect_and_create_database();
     create_all_tables(con);
-
     int server_socket, client_socket;
     struct sockaddr_in server_addr, client_addr;
     socklen_t addr_len;

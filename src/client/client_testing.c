@@ -8,11 +8,15 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <cjson/cJSON.h>
+#include "../libraries/rsa.h"
+#include <pthread.h>
 
 #define SERVER_IP "127.0.0.1"
 #define SERVER_PORT 8080
 #define ACTION_SIZE 256
 #define MESSAGE_SIZE 65535
+
+int running = 1;
 
 void send_json(int socket_fd, cJSON *json) {
     char *json_str = cJSON_PrintUnformatted(json);
@@ -31,11 +35,31 @@ cJSON *receive_json(int socket_fd) {
     return cJSON_Parse(buffer);
 }
 
+void send_sync_action(int socket_fd) {
+    cJSON *sync_json = cJSON_CreateObject();
+    cJSON_AddStringToObject(sync_json, "action", "sync");
+    send_json(socket_fd, sync_json);
+    cJSON_Delete(sync_json);
+}
+
+void *polling_thread(void *arg) {
+    int socket_fd = *((int *)arg);
+    while (running) {
+        send_sync_action(socket_fd);
+        sleep(5);
+        cJSON *sync_response = receive_json(socket_fd);
+        if (sync_response) {
+            printf("Sync response: %s\n", cJSON_Print(sync_response));
+            cJSON_Delete(sync_response);
+        }
+    }
+    return NULL;
+}
+
 int main() {
     int socket_fd;
     struct sockaddr_in server_addr;
 
-    // Create socket
     socket_fd = socket(AF_INET, SOCK_STREAM, 0);
     if (socket_fd < 0) {
         perror("Error creating socket");
@@ -73,7 +97,6 @@ int main() {
     printf("Register response: %s\n", cJSON_Print(register_response));
     cJSON_Delete(register_response);
 
-    char *user_id;
     // Login
     cJSON *login_json = cJSON_CreateObject();
     cJSON_AddStringToObject(login_json, "action", "login");
@@ -92,24 +115,38 @@ int main() {
     }
     cJSON *login_data_response = cJSON_GetObjectItemCaseSensitive(login_response, "data");
     cJSON *login_status = cJSON_GetObjectItemCaseSensitive(login_data_response, "status");
+    char *user_id = NULL;
     if (strcmp(login_status->valuestring, "Success") == 0) {
-        cJSON *login_return = cJSON_GetObjectItemCaseSensitive(login_data_response, "return");
+        cJSON *login_return = cJSON_GetObjectItemCaseSensitive(login_data_response, "user_id");
         asprintf(&user_id, "%s", login_return->valuestring);
         printf("User ID: %s\n", login_return->valuestring);
+        cJSON *pk_return = cJSON_GetObjectItemCaseSensitive(login_data_response, "public_key");
+        char *pk = pk_return->valuestring;
+
+        printf("Public Key: %s\n", pk);
+        FILE *fp = fopen("public_keys.txt", "w");
+        if (fp == NULL) {
+            perror("Failed to open file");
+            exit(EXIT_FAILURE);
+        }
+        fprintf(fp, "%s", pk);
+        fclose(fp);
     }
     printf("Login response: %s\n", cJSON_Print(login_response));
     cJSON_Delete(login_response);
-
     // Create chatroom
     cJSON *create_chatroom_json = cJSON_CreateObject();
     cJSON_AddStringToObject(create_chatroom_json, "action", "createcroom");
     cJSON *create_chatroom_data = cJSON_CreateObject();
-    cJSON_AddStringToObject(create_chatroom_data, "name", "chatroom12345");
-    cJSON_AddStringToObject(create_chatroom_data, "administrator_id", user_id); // Assuming user ID is 1
-    cJSON_AddItemToObject(create_chatroom_json, "data", create_chatroom_data);
-    send_json(socket_fd, create_chatroom_json);
-    printf("Chatroom Creation Sent: %s\n", cJSON_Print(create_chatroom_json));
-    cJSON_Delete(create_chatroom_json);
+    cJSON_AddStringToObject(create_chatroom_data, "name", encrypt("lostilines"));
+    if (user_id) {
+
+        cJSON_AddStringToObject(create_chatroom_data, "administrator_id", encrypt(user_id));
+        cJSON_AddItemToObject(create_chatroom_json, "data", create_chatroom_data);
+        send_json(socket_fd, create_chatroom_json);
+        printf("Chatroom Creation Sent: %s\n", cJSON_Print(create_chatroom_json));
+        cJSON_Delete(create_chatroom_json);
+    }
     // Wait for chatroom creation response
     cJSON *chatroom_response = receive_json(socket_fd);
     if (!chatroom_response) {
@@ -135,7 +172,7 @@ int main() {
     cJSON_AddStringToObject(send_message_data, "channel_id", chatroom_id);
     cJSON_AddItemToObject(send_message_json, "data", send_message_data);
     send_json(socket_fd, send_message_json);
-    printf("Exit Sent: %s\n", cJSON_Print(send_message_json));
+    printf("Message Sent: %s\n", cJSON_Print(send_message_json));
     cJSON_Delete(send_message_json);
 
     // Wait for message response
@@ -145,6 +182,34 @@ int main() {
     }
     printf("Message response: %s\n", cJSON_Print(message_response));
     cJSON_Delete(message_response);
+
+    pthread_t poll_thread;
+    pthread_create(&poll_thread, NULL, polling_thread, (void *)&socket_fd);
+
+    // User input loop
+    while (1) {
+        char input[256];
+        printf("Enter action (or 'exit' to quit): ");
+        fgets(input, sizeof(input), stdin);
+        input[strcspn(input, "\n")] = '\0';
+
+        if (strcmp(input, "exit") == 0) {
+            running = 0;
+            pthread_join(poll_thread, NULL);
+            break;
+        }
+
+        cJSON *user_action_json = cJSON_CreateObject();
+        cJSON_AddStringToObject(user_action_json, "action", input);
+        send_json(socket_fd, user_action_json);
+        cJSON_Delete(user_action_json);
+
+        cJSON *user_action_response = receive_json(socket_fd);
+        if (user_action_response) {
+            printf("Response: %s\n", cJSON_Print(user_action_response));
+            cJSON_Delete(user_action_response);
+        }
+    }
 
     // Logout
     cJSON *logout_json = cJSON_CreateObject();
