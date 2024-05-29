@@ -1,24 +1,24 @@
 import React, { useState } from 'react';
 import "./GroupParticipants.css";
+import { useWebSocket } from '../components/WebSocketConnection';  
 
 function GroupParticipants({ group, onUpdateGroup }) {
   const [participants, setParticipants] = useState(group.Participants);
+  const sendMessage = useWebSocket();
 
   const handleKickParticipant = (groupName, userName) => {
     const updatedParticipants = participants.filter(participant => participant.User !== userName);
     setParticipants(updatedParticipants);
-    // Optionally call a function to update the group in the parent component or server
     onUpdateGroup(groupName, updatedParticipants);
+
+    sendMessage({ type: 'kick_participant', group: groupName, user: userName });
   };
 
   const handleLeaveChat = (groupName) => {
-    // Implement logic to handle leaving the chat
-    console.log(`Leaving chat: ${groupName}`);
-    // Call a function to handle the user leaving the chat in the parent component or server
-    onUpdateGroup(groupName, participants, true); // Pass a flag or additional parameter if needed
-  };
+    onUpdateGroup(groupName, participants, true);
 
-  console.log('Rendering GroupParticipants with group:', group);
+    sendMessage({ type: 'leave_chat', group: groupName });
+  };
 
   if (!participants || participants.length === 0) {
     return <div>No participants available</div>;

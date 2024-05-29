@@ -24,11 +24,7 @@ function ChatCard({ group, onSendMessage, onKickParticipant, onLeaveChat }) {
 
   const handleUpdateGroup = (groupName, updatedParticipants, userLeft) => {
     if (userLeft) {
-      // Handle user leaving the chat
-      console.log(`User left the chat: ${groupName}`);
-      // Implement additional logic if needed
     } else {
-      // Update the current group with new participants
       setCurrentGroup(prevGroup => ({
         ...prevGroup,
         Participants: updatedParticipants
@@ -39,12 +35,8 @@ function ChatCard({ group, onSendMessage, onKickParticipant, onLeaveChat }) {
 
   const handleParticipantsClick = () => {
     setShowParticipants(!showParticipants);
-    console.log('Participants button clicked');
-    console.log('showParticipants state:', !showParticipants);
   };
 
-  console.log('Rendering ChatCard with group:', group);
-  console.log('showParticipants state:', showParticipants);
 
   return (
     <div className='chat'>

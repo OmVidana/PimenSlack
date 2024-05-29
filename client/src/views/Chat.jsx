@@ -5,12 +5,16 @@ import 'bootstrap-icons/font/bootstrap-icons.css';
 import 'bootstrap/dist/css/bootstrap.css';
 import CreateGroup from '../components/createGroup';
 import ChatCard from '../components/chatCard';
+import Notifications from '../components/notifications';
+import { useWebSocket } from '../components/WebSocketConnection';
 
 function Chat() {
   const [groups, setGroups] = useState(Data);
   const [selectedGroupName, setSelectedGroupName] = useState(null);
   const [showGroupModal, setShowGroupModal] = useState(false);
-  const [showNotificationsModal, setShowNotificationsModal] = useState(false)
+  const [showNotificationsModal, setShowNotificationsModal] = useState(false);
+  const [user, setUser] = useState("Gabriel"); 
+  const sendMessage = useWebSocket();
 
   const openGroupModal = () => {
     setShowGroupModal(true);
@@ -34,9 +38,11 @@ function Chat() {
         GroupName: groupName,
         Message: "Nuevo grupo creado",
         Hour: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        messages: []
+        messages: [],
+        Participants: [{ User: user, State: 0 }] 
       };
       setGroups([...groups, newGroup]);
+      sendMessage({ type: 'new_group', group: newGroup }); 
     }
   };
 
@@ -50,6 +56,11 @@ function Chat() {
         ? { ...group, messages: [...group.messages, newMessage], Message: newMessage.text, Hour: newMessage.time } 
         : group
     ));
+    sendMessage({ type: 'message', group: groupName, message: newMessage }); 
+  };
+
+  const updateGroups = (updatedGroups) => {
+    setGroups(updatedGroups);
   };
 
   const selectedGroup = groups.find(group => group.GroupName === selectedGroupName);
@@ -100,6 +111,7 @@ function Chat() {
         )}
       </header>
       <CreateGroup showModal={showGroupModal} closeModal={closeGroupModal} addGroup={addGroup} />
+      <Notifications showModal={showNotificationsModal} closeModal={closeNotificationsModal} user={user} groups={groups} updateGroups={updateGroups}/>
     </div>
   );
 }

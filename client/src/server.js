@@ -1,46 +1,58 @@
-const express = require('express');
-const bodyParser = require('body-parser');
-const fs = require('fs');
-const path = require('path');
-const cors = require('cors'); // Add this line
+const WebSocket = require('ws');
+const net = require('net');
 
-const app = express();
-const port = 3001;
+const wss = new WebSocket.Server({ port: 3001 });
 
-app.use(cors()); // Add this line to enable CORS
-app.use(bodyParser.json());
+const connectToCServer = (ws) => {
+    const cServerHost = '127.0.0.1'; 
+    const cServerPort = 5000;
+    let cServerSocket = new net.Socket();
 
-// Endpoint to get groups data
-app.get('/groups', (req, res) => {
-  fs.readFile(path.join(__dirname, 'groups.json'), 'utf8', (err, data) => {
-    if (err) {
-      res.status(500).send('Error reading groups data');
-    } else {
-      res.send(data);
-    }
-  });
+    const attemptConnection = () => {
+        cServerSocket.connect(cServerPort, cServerHost, () => {
+            console.log('Connected to C server');
+        });
+    };
+
+    attemptConnection();
+
+    cServerSocket.on('connect', () => {
+        ws.on('message', (message) => {
+            console.log('Received from client:', message);
+            cServerSocket.write(message);
+        });
+    });
+
+    cServerSocket.on('data', (data) => {
+        const response = data.toString();
+        console.log('Received from C server:', response);
+        ws.send(response);
+    });
+
+    cServerSocket.on('error', (err) => {
+        console.error('C server socket error:', err);
+        cServerSocket.destroy();
+    });
+
+    cServerSocket.on('close', () => {
+        console.log('C server socket closed, attempting to reconnect...');
+        setTimeout(attemptConnection, 5000); 
+    });
+
+    ws.on('close', () => {
+        console.log('WebSocket client disconnected');
+        cServerSocket.end();
+    });
+
+    ws.on('error', (err) => {
+        console.error('WebSocket error:', err);
+        cServerSocket.end();
+    });
+};
+
+wss.on('connection', (ws) => {
+    console.log('WebSocket client connected');
+    connectToCServer(ws);
 });
 
-// Endpoint to save new group
-app.post('/groups', (req, res) => {
-  const newGroup = req.body;
-  fs.readFile(path.join(__dirname, 'groups.json'), 'utf8', (err, data) => {
-    if (err) {
-      res.status(500).send('Error reading groups data');
-    } else {
-      const groups = JSON.parse(data);
-      groups.push(newGroup);
-      fs.writeFile(path.join(__dirname, 'groups.json'), JSON.stringify(groups, null, 2), (err) => {
-        if (err) {
-          res.status(500).send('Error writing groups data');
-        } else {
-          res.status(200).send('Group added successfully');
-        }
-      });
-    }
-  });
-});
-
-app.listen(port, () => {
-  console.log(`Server running at http://localhost:${port}`);
-});
+console.log('Node.js WebSocket server listening on port 3001');

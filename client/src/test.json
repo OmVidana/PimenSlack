@@ -23,13 +23,16 @@
       ],
       "Participants": [
 {
-  "User": "Gabriel"
+  "User": "Gabriel",
+  "State": 0
 },
 {
-  "User": "Migue"
+  "User": "Migue",
+  "State": 0
 },
 {
-  "User":"Dany"
+  "User":"Dany",
+  "State": 0 
 }
       ]
     },

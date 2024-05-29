@@ -4,6 +4,8 @@ import '../styles/Register.css';
 import logo from '../Logo.png';
 import 'bootstrap-icons/font/bootstrap-icons.css';
 import { Link, useNavigate } from 'react-router-dom';
+import { useWebSocket } from '../components/WebSocketConnection';
+
 
 function Register() {
   const [name, setName] = useState("");
@@ -11,26 +13,28 @@ function Register() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const navigate = useNavigate();
+  const sendMessage = useWebSocket();
 
-  // Fetch existing users from local storage
   const getUsers = () => {
     const users = localStorage.getItem('users');
     return users ? JSON.parse(users) : [];
   };
 
-  // Handle registration
   const handleRegister = (event) => {
     event.preventDefault();
     const users = getUsers();
 
-    // Check if username is already taken
     const userExists = users.some(user => user.Username === name);
     if (userExists) {
       setError('Username is already taken');
       return;
     }
+  else{
+    setError('');
+    sendMessage({ action: 'register', data:{username: name, password: password} });
+    navigate('/Chat');
+  }
 
-    // Add new user to the list
     const newUser = { Username: name, Password: password };
     users.push(newUser);
     localStorage.setItem('users', JSON.stringify(users));
@@ -38,7 +42,6 @@ function Register() {
     setSuccess('Registration successful! Redirecting to login...');
     setError('');
 
-    // Redirect to Login after 2 seconds
     setTimeout(() => navigate('/Login'), 2000);
   };
 

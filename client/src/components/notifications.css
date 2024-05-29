@@ -1,0 +1,24 @@
+.notificationContainer{
+    display: flex;
+    position: relative;
+    flex-direction: column;
+}
+
+
+.notification{
+    background-color: #626262;
+    height: 70px;
+    border-radius: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 10px 0px 30px;
+    margin-bottom: 5px;
+}
+
+.notificationName{
+    font-weight: bold;
+    color: aliceblue;
+    font-size: 20px;
+    margin-right: 120px;
+}
