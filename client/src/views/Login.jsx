@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import 'bootstrap/dist/css/bootstrap.css';
 import '../styles/Login.css';
 import logo from '../Logo.png';
@@ -10,49 +10,46 @@ function Login() {
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [userData, setUserData] = useState(null); // Variable de estado para guardar los datos del usuario
   const navigate = useNavigate();
-  const sendMessage = useWebSocket();
+  const { sendMessage, subscribe, unsubscribe, startSync } = useWebSocket();
 
-  const getUsers = () => {
-    const users = localStorage.getItem('users');
-    return users ? JSON.parse(users) : [];
-  };
-
-  const handleLogin = (event) => {
+  const handleLogin = useCallback((event) => {
     event.preventDefault();
-    const users = getUsers();
-    const user = users.find(user => user.Username === name && user.Password === password);
+    console.log("Sending login message:", { username: name, password: password });
+    sendMessage({ action: 'login', data: { username: name, password: password } });
+  }, [name, password, sendMessage]);
 
-    if (user) {
-      setError('');
-      sendMessage({ action: 'login', data:{username: user.Username, password: user.Password} });
-      navigate('/Chat');
-    } else {
-      setError('Invalid username or password');
-    }
-  };
-
-  const handleServerMessage = (message) => {
-    if (message.action === 'auth') {
-      if (message.data.status === 'Success') {
-        navigate('/Chat');
-      } else {
+  useEffect(() => {
+    const handleServerMessage = (message) => {
+      console.log("Received server message:", message);
+      if (message.action === 'auth') {
+        if (message.data.status === 'Success') {
+          console.log("Login successful, saving data and navigating to /Chat");
+          const userInfo = {
+            userId: message.data.user_id,
+            publicKey: message.data.public_key
+          };
+          setUserData(userInfo);
+          
+          console.log("User Data:", userInfo);
+          // startSync(); // Iniciar la sincronización después de un inicio de sesión exitoso
+          navigate('/Chat');
+        } else {
+          setError(message.data.return);
+        }
+      } else if (message.action === 'error') {
         setError(message.data.return);
       }
-    } else if (message.action === 'error') {
-      setError(message.data.return);
-    }
-  };
+    };
 
-  // useEffect(() => {
-  //   const handleMessage = (message) => {
-  //     handleServerMessage(message);
-  //   };
-  //   sendMessage.subscribe(handleMessage);
-  //   return () => {
-  //     sendMessage.unsubscribe(handleMessage);
-  //   };
-  // }, [sendMessage]);
+    console.log("Subscribing to server messages");
+    subscribe(handleServerMessage);
+    return () => {
+      console.log("Unsubscribing from server messages");
+      unsubscribe(handleServerMessage);
+    };
+  }, [subscribe, unsubscribe, navigate]);
 
   return (
     <div className='Login'>

@@ -31,6 +31,7 @@ function MainPage(){
             <img className = "logo" src={LogoYellow}></img>
             </div>
         </div>
+        
        
     )
 }

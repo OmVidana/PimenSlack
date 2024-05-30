@@ -26,11 +26,11 @@ function Chat() {
 
   const openNotificationsModal = () => {
     setShowNotificationsModal(true);
-  }
+  };
 
   const closeNotificationsModal = () => {
     setShowNotificationsModal(false);
-  }
+  };
 
   const addGroup = (groupName) => {
     if (groupName.trim() !== "") {
@@ -39,15 +39,27 @@ function Chat() {
         Message: "Nuevo grupo creado",
         Hour: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         messages: [],
-        Participants: [{ User: user, State: 0 }] 
+        Participants: [{ User: user, State: 0 }] // State 0 means admin
       };
       setGroups([...groups, newGroup]);
-      sendMessage({ type: 'new_group', group: newGroup }); 
+      sendMessage({ type: 'new_group', group: newGroup });
     }
   };
 
   const selectGroup = (groupName) => {
-    setSelectedGroupName(groupName);
+    const group = groups.find(group => group.GroupName === groupName);
+    const participant = group.Participants.find(participant => participant.User === user);
+
+    if (participant && participant.State === 1) { // State 1 means access granted
+      setSelectedGroupName(groupName);
+    } else {
+      alert("You don't have access to this group yet. Please request access.");
+    }
+  };
+
+  const requestAccess = (groupName) => {
+    sendMessage({ type: 'request_access', user, group: groupName });
+    alert("Access request sent to the admin.");
   };
 
   const handleSendMessage = (groupName, newMessage) => {
@@ -56,7 +68,7 @@ function Chat() {
         ? { ...group, messages: [...group.messages, newMessage], Message: newMessage.text, Hour: newMessage.time } 
         : group
     ));
-    sendMessage({ type: 'message', group: groupName, message: newMessage }); 
+    sendMessage({ type: 'message', group: groupName, message: newMessage });
   };
 
   const updateGroups = (updatedGroups) => {
@@ -91,17 +103,19 @@ function Chat() {
             <div className='usernameTag'>Usuario activo</div>
           </div>
           {groups.map((group, key) => (
-            <button className='messageSelectionBtn' key={key} onClick={() => selectGroup(group.GroupName)}>
-              <div className='chatCard'>
-                <p className="userName">
-                  {group.GroupName}
-                  <p>{group.Hour}</p>
-                </p>
-                <div className='messagePreview'>
-                  {group.Message}
-                </div>
-              </div>
-            </button>
+            <div className='chatCard' key={key}>
+              <button className='messageSelectionBtn' key={key}  onClick={() => selectGroup(group.GroupName)} disabled={!group.Participants.some(p => p.User === user && p.State === 1)}>
+                  <p className="userName">
+                    {group.GroupName}
+                  </p>
+                  <div className='messagePreview'>
+                    {group.Message}
+                  </div>
+              </button>
+              {!group.Participants.some(p => p.User === user && p.State === 1) && (
+                <button className='requestAccessBtn' onClick={() => requestAccess(group.GroupName)}><i class="bi bi-send-plus-fill" style={{marginRight:20}}></i></button>
+              )}
+            </div>
           ))}
         </div>
 

@@ -4,8 +4,8 @@ const net = require('net');
 const wss = new WebSocket.Server({ port: 3001 });
 
 const connectToCServer = (ws) => {
-    const cServerHost = '127.0.0.1'; 
-    const cServerPort = 5000;
+    const cServerHost = '172.25.161.138'; 
+    const cServerPort = 8080;
     let cServerSocket = new net.Socket();
 
     const attemptConnection = () => {
@@ -36,7 +36,7 @@ const connectToCServer = (ws) => {
 
     cServerSocket.on('close', () => {
         console.log('C server socket closed, attempting to reconnect...');
-        setTimeout(attemptConnection, 5000); 
+        setTimeout(attemptConnection, 8080); 
     });
 
     ws.on('close', () => {

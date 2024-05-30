@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import 'bootstrap/dist/css/bootstrap.css';
 import '../styles/Register.css';
 import logo from '../Logo.png';
@@ -6,44 +6,64 @@ import 'bootstrap-icons/font/bootstrap-icons.css';
 import { Link, useNavigate } from 'react-router-dom';
 import { useWebSocket } from '../components/WebSocketConnection';
 
-
 function Register() {
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const navigate = useNavigate();
-  const sendMessage = useWebSocket();
+  const { sendMessage, subscribe, unsubscribe, encryptionKeys } = useWebSocket();
 
-  const getUsers = () => {
-    const users = localStorage.getItem('users');
-    return users ? JSON.parse(users) : [];
-  };
-
-  const handleRegister = (event) => {
-    event.preventDefault();
-    const users = getUsers();
-
-    const userExists = users.some(user => user.Username === name);
-    if (userExists) {
-      setError('Username is already taken');
-      return;
+  const modpow = (base, power, mod) => {
+    let result = 1;
+    for (let i = 0; i < power; i++) {
+        result = (result * base) % mod;
     }
-  else{
-    setError('');
-    sendMessage({ action: 'register', data:{username: name, password: password} });
-    navigate('/Chat');
-  }
-
-    const newUser = { Username: name, Password: password };
-    users.push(newUser);
-    localStorage.setItem('users', JSON.stringify(users));
-
-    setSuccess('Registration successful! Redirecting to login...');
-    setError('');
-
-    setTimeout(() => navigate('/Login'), 2000);
+    return result;
   };
+
+  const encrypt = (inputStr, n, e) => {
+    let ciphertext = "";
+    for (let i = 0; i < inputStr.length; i++) {
+        let c = modpow(inputStr.charCodeAt(i), e, n);
+        ciphertext += c + " ";
+    }
+    // Remove the trailing space
+    ciphertext = ciphertext.trim();
+    return ciphertext;
+  };
+
+  const handleRegister = useCallback((event) => {
+    event.preventDefault();
+    if (encryptionKeys) {
+      const encryptedName = encrypt(name, encryptionKeys.n, encryptionKeys.e);
+      const encryptedPassword = encrypt(password, encryptionKeys.n, encryptionKeys.e);
+      sendMessage({ action: 'register', data: { username: name, password: password } });
+    } else {
+      setError('Encryption keys not available.');
+    }
+  }, [name, password, sendMessage, encryptionKeys]);
+
+  useEffect(() => {
+    const handleServerMessage = (message) => {
+      if (message.action === 'register') {
+        if (message.data.status === 'Success') {
+          setSuccess('Registration successful! Redirecting to login...');
+          setError('');
+          setTimeout(() => navigate('/Login'), 2000);
+        } else {
+          setError(message.data.return);
+        }
+      } else if (message.action === 'error') {
+        setError(message.data.return);
+      }
+    };
+
+    subscribe(handleServerMessage);
+    return () => {
+      unsubscribe(handleServerMessage);
+    };
+  }, [subscribe, unsubscribe, navigate]);
 
   return (
     <div className='Login'>
@@ -57,26 +77,27 @@ function Register() {
         {error && <div className="alert alert-danger">{error}</div>}
         {success && <div className="alert alert-success">{success}</div>}
         <form onSubmit={handleRegister} style={{ padding: 80 }}>
-
-        <div className='userNameRegister'>
-          <div>Username</div>
-          <input
-            className='userInput'
-            placeholder='Username'
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-          />
+          <div className='userNameRegister'>
+            <div>Username</div>
+            <input
+              className='userInput'
+              placeholder='Username'
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
           </div>
 
-          <div className=''></div>
-          <input
-            className='userInput passwordInput'
-            placeholder='Password'
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
+          <div className='passwordRegister'>
+            <div>Password</div>
+            <input
+              className='userInput passwordInput'
+              placeholder='Password'
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+          </div>
           <button type="submit" className="btnRegister2">Registrarse</button>
         </form>
       </header>

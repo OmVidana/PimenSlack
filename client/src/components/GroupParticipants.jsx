@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import "./GroupParticipants.css";
 import Data from "../test.json";
-
 import { useWebSocket } from '../components/WebSocketConnection';  
 import ActiveUsers from '../components/activeUsers';
 
