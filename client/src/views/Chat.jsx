@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import "../styles/Chat.css";
-import Data from "../test.json";
 import 'bootstrap-icons/font/bootstrap-icons.css';
 import 'bootstrap/dist/css/bootstrap.css';
 import CreateGroup from '../components/createGroup';
@@ -9,12 +9,45 @@ import Notifications from '../components/notifications';
 import { useWebSocket } from '../components/WebSocketConnection';
 
 function Chat() {
-  const [groups, setGroups] = useState(Data);
+  const location = useLocation();
+  const user = location.state.user; // Obtener el usuario del estado pasado
+  const [groups, setGroups] = useState([]);
   const [selectedGroupName, setSelectedGroupName] = useState(null);
   const [showGroupModal, setShowGroupModal] = useState(false);
   const [showNotificationsModal, setShowNotificationsModal] = useState(false);
-  const [user, setUser] = useState("Gabriel"); 
-  const sendMessage = useWebSocket();
+  const { sendMessage, subscribe, unsubscribe } = useWebSocket();
+
+  useEffect(() => {
+    const fetchGroups = async () => {
+      try {
+        const response = await fetch('http://localhost:3002/channels');
+        const data = await response.json();
+        const formattedData = data.map(group => ({
+          ...group,
+          Participants: group.Participants || [],
+          messages: [] // Asegurarse de que messages siempre sea un array
+        }));
+        setGroups(formattedData);
+      } catch (error) {
+        console.error('Error fetching groups:', error);
+      }
+    };
+
+    fetchGroups();
+  }, []);
+
+  useEffect(() => {
+    const handleServerMessage = (message) => {
+      if (message.type === 'update_groups') {
+        setGroups(message.groups);
+      }
+    };
+
+    subscribe(handleServerMessage);
+    return () => {
+      unsubscribe(handleServerMessage);
+    };
+  }, [subscribe, unsubscribe]);
 
   const openGroupModal = () => {
     setShowGroupModal(true);
@@ -32,42 +65,67 @@ function Chat() {
     setShowNotificationsModal(false);
   };
 
-  const addGroup = (groupName) => {
-    if (groupName.trim() !== "") {
-      const newGroup = {
-        GroupName: groupName,
-        Message: "Nuevo grupo creado",
-        Hour: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        messages: [],
-        Participants: [{ User: user, State: 0 }] // State 0 means admin
-      };
+  const addGroup = async (groupName) => {
+    try {
+      const response = await fetch('http://localhost:3002/channels', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ name: groupName, administrator_id: user.userId })
+      });
+      if (!response.ok) {
+        throw new Error(`Error: ${response.statusText}`);
+      }
+      const newGroup = await response.json();
       setGroups([...groups, newGroup]);
       sendMessage({ type: 'new_group', group: newGroup });
+    } catch (error) {
+      console.error('Error creating group:', error);
     }
   };
 
   const selectGroup = (groupName) => {
-    const group = groups.find(group => group.GroupName === groupName);
-    const participant = group.Participants.find(participant => participant.User === user);
+    const group = groups.find(group => group.name === groupName);
+    if (!group) return;
 
-    if (participant && participant.State === 1) { // State 1 means access granted
-      setSelectedGroupName(groupName);
-    } else {
-      alert("You don't have access to this group yet. Please request access.");
+    setSelectedGroupName(groupName);
+
+    // Fetch messages when a group is selected
+    fetchMessages(group.ID);
+  };
+
+  const fetchMessages = async (channelId) => {
+    try {
+      const response = await fetch(`http://localhost:3002/channels/${channelId}/messages`);
+      const messages = await response.json();
+      setGroups(groups => groups.map(group => group.ID === channelId ? { ...group, messages } : group));
+    } catch (error) {
+      console.error('Error fetching messages:', error);
     }
   };
 
-  const requestAccess = (groupName) => {
-    sendMessage({ type: 'request_access', user, group: groupName });
-    alert("Access request sent to the admin.");
-  };
+  const handleSendMessage = async (groupName, newMessage) => {
+    const group = groups.find(group => group.name === groupName);
+    if (!group) return;
 
-  const handleSendMessage = (groupName, newMessage) => {
-    setGroups(groups.map(group => 
-      group.GroupName === groupName 
-        ? { ...group, messages: [...group.messages, newMessage], Message: newMessage.text, Hour: newMessage.time } 
-        : group
-    ));
+    try {
+      const response = await fetch('http://localhost:3002/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ msg: newMessage.text, user_id: user.userId, channel_id: group.ID })
+      });
+      if (!response.ok) {
+        throw new Error(`Error: ${response.statusText}`);
+      }
+      const savedMessage = await response.json();
+      setGroups(groups.map(g => g.name === groupName ? { ...g, messages: [...g.messages, savedMessage] } : g));
+    } catch (error) {
+      console.error('Error sending message:', error);
+    }
+
     sendMessage({ type: 'message', group: groupName, message: newMessage });
   };
 
@@ -75,7 +133,7 @@ function Chat() {
     setGroups(updatedGroups);
   };
 
-  const selectedGroup = groups.find(group => group.GroupName === selectedGroupName);
+  const selectedGroup = groups.find(group => group.name === selectedGroupName);
 
   return (
     <div className='Login'>
@@ -104,28 +162,25 @@ function Chat() {
           </div>
           {groups.map((group, key) => (
             <div className='chatCard' key={key}>
-              <button className='messageSelectionBtn' key={key}  onClick={() => selectGroup(group.GroupName)} disabled={!group.Participants.some(p => p.User === user && p.State === 1)}>
-                  <p className="userName">
-                    {group.GroupName}
-                  </p>
-                  <div className='messagePreview'>
-                    {group.Message}
-                  </div>
+              <button className='messageSelectionBtn' onClick={() => selectGroup(group.name)}>
+                <p className="userName">
+                  {group.name}
+                </p>
+                <div className='messagePreview'>
+                  {group.Message}
+                </div>
               </button>
-              {!group.Participants.some(p => p.User === user && p.State === 1) && (
-                <button className='requestAccessBtn' onClick={() => requestAccess(group.GroupName)}><i class="bi bi-send-plus-fill" style={{marginRight:20}}></i></button>
-              )}
             </div>
           ))}
         </div>
 
         {/* Chat */}
         {selectedGroup && (
-          <ChatCard group={selectedGroup} onSendMessage={handleSendMessage} />
+          <ChatCard group={selectedGroup} onSendMessage={handleSendMessage} userId={user.userId} />
         )}
       </header>
       <CreateGroup showModal={showGroupModal} closeModal={closeGroupModal} addGroup={addGroup} />
-      <Notifications showModal={showNotificationsModal} closeModal={closeNotificationsModal} user={user} groups={groups} updateGroups={updateGroups}/>
+      <Notifications showModal={showNotificationsModal} closeModal={closeNotificationsModal} user={user} groups={groups} updateGroups={updateGroups} />
     </div>
   );
 }

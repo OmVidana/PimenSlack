@@ -1,55 +1,60 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import GroupParticipants from './GroupParticipants';
 import "./chatCard.css";
-function ChatCard({ group, onSendMessage, onKickParticipant, onLeaveChat }) {
+
+function ChatCard({ group, onSendMessage, userId }) {
   const [currentMessage, setCurrentMessage] = useState("");
-  const [showParticipants, setShowParticipants] = useState(false);
+  const [messages, setMessages] = useState([]);
   const [currentGroup, setCurrentGroup] = useState(group);
+
+  useEffect(() => {
+    const fetchMessages = async () => {
+      try {
+        const response = await fetch(`http://localhost:3002/channels/${group.ID}/messages`);
+        const data = await response.json();
+
+        // Asegúrate de que los mensajes recibidos del backend tengan el formato correcto
+        const formattedMessages = data.map(msg => ({
+          text: msg.msg,  // Ajusta esto según la estructura de tu base de datos
+          sender: msg.user_id === userId ? 'user' : 'other',  // Diferenciar entre mensajes del usuario actual y otros
+          time: new Date(msg.sent_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })  // Ajusta según tu estructura de datos
+        }));
+
+        setMessages(formattedMessages);
+      } catch (error) {
+        console.error('Error fetching messages:', error);
+      }
+    };
+
+    fetchMessages();
+  }, [group.ID, userId]);
 
   const handleInputChange = (event) => {
     setCurrentMessage(event.target.value);
   };
 
-  const handleSendClick = () => {
+  const handleSendClick = async () => {
     if (currentMessage.trim() !== "") {
       const newMessage = {
         text: currentMessage,
         sender: 'user',
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       };
-      onSendMessage(group.GroupName, newMessage);
+      await onSendMessage(group.name, newMessage);
+      setMessages([...messages, newMessage]);
       setCurrentMessage("");
     }
   };
 
-  const handleUpdateGroup = (groupName, updatedParticipants, userLeft) => {
-    if (userLeft) {
-    } else {
-      setCurrentGroup(prevGroup => ({
-        ...prevGroup,
-        Participants: updatedParticipants
-      }));
-    }
-  };
-  
-
-  const handleParticipantsClick = () => {
-    setShowParticipants(!showParticipants);
-  };
-
-
   return (
     <div className='chat'>
       <div className='nameHeader'>
-        <p className='userNameText'>{group.GroupName}</p>
-        <button className='optionsBtn' onClick={handleParticipantsClick}>
-          <i className="bi bi-three-dots" style={{ fontSize: 60, color: "#1f1f1f" }}></i>
-        </button>
+        <p className='userNameText'>{group.name}</p>
       </div>
 
       <div className='chatHolder'>
         <div className='messageHolder'>
-          {group.messages.map((message, index) => (
+          {messages.map((message, index) => (
             <div key={index} className={`message ${message.sender === 'user' ? 'userMsg' : 'otherMsg'}`}>
               <div style={{ fontWeight: "bold", color: "#1f1f1f" }}>
                 {message.sender}
@@ -60,13 +65,6 @@ function ChatCard({ group, onSendMessage, onKickParticipant, onLeaveChat }) {
               </div>
             </div>
           ))}
-
-          
-{showParticipants && currentGroup.Participants && (
-        <div className='participantsHolder'>
-          <GroupParticipants group={currentGroup} onUpdateGroup={handleUpdateGroup} />
-        </div>
-      )}
         </div>
 
         <div className='inputGroup'>

@@ -19,7 +19,7 @@ import LogoYellow from "../LogoYellow.png";
 
 function MainPage(){
     return(
-   
+
             <div>
             <Link to="Menu"> 
             <h1 className='title'>PS</h1>
