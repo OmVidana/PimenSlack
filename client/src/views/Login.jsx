@@ -5,17 +5,18 @@ import logo from '../Logo.png';
 import 'bootstrap-icons/font/bootstrap-icons.css';
 import { Link, useNavigate } from 'react-router-dom';
 import { useWebSocket } from '../components/WebSocketConnection';
+import { encrypt } from '../components/Encryption';
 
 function Login() {
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const navigate = useNavigate();
-  const { sendMessage, subscribe, unsubscribe } = useWebSocket();
+  const { sendMessage, subscribe, unsubscribe, encryptionKeys } = useWebSocket();
 
   const handleLogin = useCallback((event) => {
     event.preventDefault();
-    sendMessage({ action: 'login', data: { username: name, password: password } });
+    sendMessage({ action: 'login', data: { username: encrypt(name, encryptionKeys.n, encryptionKeys.e), password: encrypt(password, encryptionKeys.n, encryptionKeys.e) } });
   }, [name, password, sendMessage]);
 
   useEffect(() => {
@@ -26,6 +27,7 @@ function Login() {
             userId: message.data.user_id,
             publicKey: message.data.public_key
           };
+
           navigate('/Chat', { state: { user: userInfo } });
         } else {
           setError(message.data.return);

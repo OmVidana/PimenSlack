@@ -12,12 +12,11 @@ function ChatCard({ group, onSendMessage, userId }) {
       try {
         const response = await fetch(`http://localhost:3002/channels/${group.ID}/messages`);
         const data = await response.json();
-
-        // Asegúrate de que los mensajes recibidos del backend tengan el formato correcto
+        console.log(data)
         const formattedMessages = data.map(msg => ({
-          text: msg.msg,  // Ajusta esto según la estructura de tu base de datos
-          sender: msg.user_id === userId ? 'user' : 'other',  // Diferenciar entre mensajes del usuario actual y otros
-          time: new Date(msg.sent_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })  // Ajusta según tu estructura de datos
+          text: msg.msg,  
+          sender: msg.user_id === userId ? 'user' : 'other',  
+          time: new Date(msg.sent_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })  
         }));
 
         setMessages(formattedMessages);

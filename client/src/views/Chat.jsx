@@ -10,7 +10,7 @@ import { useWebSocket } from '../components/WebSocketConnection';
 
 function Chat() {
   const location = useLocation();
-  const user = location.state.user; // Obtener el usuario del estado pasado
+  const user = location.state.user; 
   const [groups, setGroups] = useState([]);
   const [selectedGroupName, setSelectedGroupName] = useState(null);
   const [showGroupModal, setShowGroupModal] = useState(false);
@@ -25,7 +25,7 @@ function Chat() {
         const formattedData = data.map(group => ({
           ...group,
           Participants: group.Participants || [],
-          messages: [] // Asegurarse de que messages siempre sea un array
+          messages: [] 
         }));
         setGroups(formattedData);
       } catch (error) {
@@ -91,7 +91,6 @@ function Chat() {
 
     setSelectedGroupName(groupName);
 
-    // Fetch messages when a group is selected
     fetchMessages(group.ID);
   };
 

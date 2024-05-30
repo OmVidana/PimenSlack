@@ -11,7 +11,7 @@ const connection = mysql.createConnection({
     host: '172.25.161.138',
     user: 'papu',
     password: '',
-    database: 'pimenslack_db'
+    database: 'client_db'
 });
 
 connection.connect((err) => {
@@ -69,11 +69,17 @@ app.get('/channels', (req, res) => {
 app.post('/channels', (req, res) => {
     const { name, administrator_id } = req.body;
 
+    // Log the received data for debugging
+    console.log('Received request to create channel:', { name, administrator_id });
+
     const query = 'INSERT INTO channels (name, administrator_id) VALUES (?, ?)';
     connection.query(query, [name, administrator_id], (error, results) => {
         if (error) {
             console.error('Error creating channel:', error);
-            res.status(500).send(error);
+            res.status(500).send({
+                message: 'Error creating channel',
+                error: error.message // Send the error message in the response for debugging
+            });
         } else {
             res.status(201).json({ id: results.insertId, name, administrator_id });
         }

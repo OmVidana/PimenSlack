@@ -5,6 +5,7 @@ import logo from '../Logo.png';
 import 'bootstrap-icons/font/bootstrap-icons.css';
 import { Link, useNavigate } from 'react-router-dom';
 import { useWebSocket } from '../components/WebSocketConnection';
+import { encrypt } from '../components/Encryption';
 
 function Register() {
   const [name, setName] = useState("");
@@ -14,31 +15,12 @@ function Register() {
   const navigate = useNavigate();
   const { sendMessage, subscribe, unsubscribe, encryptionKeys } = useWebSocket();
 
-  const modpow = (base, power, mod) => {
-    let result = 1;
-    for (let i = 0; i < power; i++) {
-        result = (result * base) % mod;
-    }
-    return result;
-  };
-
-  const encrypt = (inputStr, n, e) => {
-    let ciphertext = "";
-    for (let i = 0; i < inputStr.length; i++) {
-        let c = modpow(inputStr.charCodeAt(i), e, n);
-        ciphertext += c + " ";
-    }
-    // Remove the trailing space
-    ciphertext = ciphertext.trim();
-    return ciphertext;
-  };
-
   const handleRegister = useCallback((event) => {
     event.preventDefault();
     if (encryptionKeys) {
       const encryptedName = encrypt(name, encryptionKeys.n, encryptionKeys.e);
       const encryptedPassword = encrypt(password, encryptionKeys.n, encryptionKeys.e);
-      sendMessage({ action: 'register', data: { username: name, password: password } });
+      sendMessage({ action: 'register', data: { username: encryptedName, password: encryptedPassword } });
     } else {
       setError('Encryption keys not available.');
     }

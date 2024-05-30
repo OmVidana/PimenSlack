@@ -5,7 +5,7 @@ import 'bootstrap/dist/css/bootstrap.css';
 
 const Notifications = ({ showModal, closeModal, user, groups, updateGroups }) => {
   const acceptInvitation = async (groupName, groupId) => {
-    const userId = 1; // Aquí deberías obtener el ID del usuario actual
+    const userId = 1; 
     try {
         const response = await fetch('http://localhost:3002/accept-request', {
             method: 'POST',
@@ -21,7 +21,7 @@ const Notifications = ({ showModal, closeModal, user, groups, updateGroups }) =>
             if (group.name === groupName) {
                 group.Participants.forEach(participant => {
                     if (participant.User === user) {
-                        participant.State = 1; // Cambiar estado a aceptado
+                        participant.State = 1; 
                     }
                 });
             }
@@ -35,7 +35,6 @@ const Notifications = ({ showModal, closeModal, user, groups, updateGroups }) =>
 };
 
   const rejectInvitation = (groupName) => {
-    // Para rechazar, simplemente cierra el modal
     closeModal();
   };
 

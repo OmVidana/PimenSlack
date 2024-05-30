@@ -14,7 +14,7 @@ export const WebSocketProvider = ({ children }) => {
             console.log('Connected to C server');
             setWs(socket);
             // Enviar el mensaje 'getKeys' al abrir la conexión
-            socket.send(JSON.stringify({ action: 'getKeys', data: {} }));
+            socket.send(JSON.stringify({ action: 'get_keys', data: {} }));
         };
 
         socket.onmessage = (event) => {
@@ -35,7 +35,9 @@ export const WebSocketProvider = ({ children }) => {
         };
 
         return () => {
-            socket.close();
+            if (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING) {
+                socket.close();
+            }
         };
     }, [listeners]);
 
